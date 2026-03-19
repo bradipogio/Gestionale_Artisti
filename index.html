@@ -42,6 +42,29 @@
       </header>
 
       <main id="app" class="app hidden">
+        <section class="app-topbar card">
+          <div>
+            <p class="section-kicker">Agenda</p>
+            <h2 id="eventsTitle">Eventi e richieste</h2>
+          </div>
+          <div class="topbar-actions">
+            <span id="resultsCount" class="pill"></span>
+            <div id="quickActions" class="quick-actions hidden">
+              <button id="quickActionsToggle" class="fab-button" type="button" aria-expanded="false">
+                +
+              </button>
+              <div id="quickActionsMenu" class="quick-actions__menu hidden">
+                <button id="openEventModal" class="quick-actions__item" type="button">
+                  Nuovo evento
+                </button>
+                <button id="openArtistModal" class="quick-actions__item" type="button">
+                  Nuovo artista
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="toolbar card">
           <div>
             <p class="section-kicker">Filtro rapido</p>
@@ -72,13 +95,27 @@
 
         <section id="dashboardSection" class="dashboard"></section>
 
-        <section id="adminSection" class="admin-layout hidden">
-          <article class="card">
-            <div class="section-heading">
-              <div>
-                <p class="section-kicker">Admin</p>
-                <h2 id="artistFormTitle">Nuovo artista</h2>
-              </div>
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Agenda</p>
+              <h2>Vista calendario operativo</h2>
+            </div>
+          </div>
+          <div id="eventsList" class="events-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="modalOverlay" class="modal-overlay hidden">
+      <div id="artistModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="artistFormTitle">
+        <article class="card">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Admin</p>
+              <h2 id="artistFormTitle">Nuovo artista</h2>
+            </div>
+            <div class="modal-actions">
               <button
                 id="cancelArtistEdit"
                 class="button button--ghost hidden"
@@ -86,126 +123,122 @@
               >
                 Annulla modifica
               </button>
-            </div>
-            <form id="artistForm" class="form-grid">
-              <input id="artistId" name="artistId" type="hidden" />
-              <label class="field">
-                <span>Nome artista</span>
-                <input
-                  id="artistName"
-                  name="artistName"
-                  type="text"
-                  placeholder="Es. Chiara Rinaldi"
-                  required
-                />
-              </label>
-              <label class="field">
-                <span>Ruolo / specialita</span>
-                <input
-                  id="artistSpecialty"
-                  name="artistSpecialty"
-                  type="text"
-                  placeholder="Es. Soprano lirico"
-                  required
-                />
-              </label>
-              <button id="artistSubmitButton" class="button" type="submit">
-                Aggiungi artista
+              <button class="button button--ghost" type="button" data-close-modal="true">
+                Chiudi
               </button>
-            </form>
-            <div id="artistFeedback" class="admin-feedback hidden"></div>
-            <div class="admin-subsection">
-              <div class="section-heading">
-                <div>
-                  <p class="section-kicker">Roster</p>
-                  <h3>Artisti registrati</h3>
-                </div>
-              </div>
-              <div id="artistsAdminList" class="artist-admin-list"></div>
             </div>
-          </article>
-
-          <article class="card">
+          </div>
+          <form id="artistForm" class="form-grid">
+            <input id="artistId" name="artistId" type="hidden" />
+            <label class="field">
+              <span>Nome artista</span>
+              <input
+                id="artistName"
+                name="artistName"
+                type="text"
+                placeholder="Es. Chiara Rinaldi"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Ruolo / specialita</span>
+              <input
+                id="artistSpecialty"
+                name="artistSpecialty"
+                type="text"
+                placeholder="Es. Soprano lirico"
+                required
+              />
+            </label>
+            <button id="artistSubmitButton" class="button" type="submit">
+              Aggiungi artista
+            </button>
+          </form>
+          <div id="artistFeedback" class="admin-feedback hidden"></div>
+          <div class="admin-subsection">
             <div class="section-heading">
               <div>
-                <p class="section-kicker">Admin</p>
-                <h2>Nuovo evento</h2>
+                <p class="section-kicker">Roster</p>
+                <h3>Artisti registrati</h3>
               </div>
-              <span class="pill pill--accent">Richiesta cliente</span>
             </div>
-            <form id="eventForm" class="form-grid">
-              <label class="field">
-                <span>Cliente</span>
-                <input
-                  id="clientName"
-                  name="clientName"
-                  type="text"
-                  placeholder="Es. Villa Bianchi Wedding"
-                  required
-                />
-              </label>
-              <label class="field">
-                <span>Data</span>
-                <input id="eventDate" name="eventDate" type="date" required />
-              </label>
-              <label class="field">
-                <span>Location</span>
-                <input
-                  id="location"
-                  name="location"
-                  type="text"
-                  placeholder="Es. Lago di Como"
-                  required
-                />
-              </label>
-              <label class="field">
-                <span>Richiesta musicale</span>
-                <input
-                  id="requestedActs"
-                  name="requestedActs"
-                  type="text"
-                  placeholder="Es. String duo + cantante lirico"
-                  required
-                />
-              </label>
-              <label class="field field--full">
-                <span>Note organizzative</span>
-                <textarea
-                  id="eventNotes"
-                  name="eventNotes"
-                  rows="3"
-                  placeholder="Orario cerimonia, richieste speciali, logistica..."
-                ></textarea>
-              </label>
-              <fieldset class="field field--full">
-                <legend>Artisti da contattare</legend>
-                <div class="artist-picker">
-                  <label class="field">
-                    <span>Seleziona artista</span>
-                    <select id="eventArtistSelect"></select>
-                  </label>
-                  <button id="addEventArtist" class="button button--ghost" type="button">
-                    Aggiungi artista
-                  </button>
-                </div>
-                <div id="selectedEventArtists" class="selected-artists"></div>
-              </fieldset>
-              <button class="button" type="submit">Crea evento e invia richieste</button>
-            </form>
-          </article>
-        </section>
+            <div id="artistsAdminList" class="artist-admin-list"></div>
+          </div>
+        </article>
+      </div>
 
-        <section class="card">
+      <div id="eventModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+        <article class="card">
           <div class="section-heading">
             <div>
-              <p class="section-kicker">Agenda</p>
-              <h2 id="eventsTitle">Eventi e richieste</h2>
+              <p class="section-kicker">Admin</p>
+              <h2 id="eventModalTitle">Nuovo evento</h2>
             </div>
-            <span id="resultsCount" class="pill"></span>
+            <button class="button button--ghost" type="button" data-close-modal="true">
+              Chiudi
+            </button>
           </div>
-          <div id="eventsList" class="events-list"></div>
-        </section>
-      </main>
+          <form id="eventForm" class="form-grid">
+            <label class="field">
+              <span>Cliente</span>
+              <input
+                id="clientName"
+                name="clientName"
+                type="text"
+                placeholder="Es. Villa Bianchi Wedding"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Data</span>
+              <input id="eventDate" name="eventDate" type="date" required />
+            </label>
+            <label class="field">
+              <span>Location</span>
+              <input
+                id="location"
+                name="location"
+                type="text"
+                placeholder="Es. Lago di Como"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Richiesta musicale</span>
+              <input
+                id="requestedActs"
+                name="requestedActs"
+                type="text"
+                placeholder="Es. String duo + cantante lirico"
+                required
+              />
+            </label>
+            <label class="field field--full">
+              <span>Note organizzative</span>
+              <textarea
+                id="eventNotes"
+                name="eventNotes"
+                rows="3"
+                placeholder="Orario cerimonia, richieste speciali, logistica..."
+              ></textarea>
+            </label>
+            <fieldset class="field field--full">
+              <legend>Artisti da contattare</legend>
+              <div class="artist-picker">
+                <label class="field">
+                  <span>Seleziona artista</span>
+                  <select id="eventArtistSelect"></select>
+                </label>
+                <button id="addEventArtist" class="button button--ghost" type="button">
+                  Aggiungi artista
+                </button>
+              </div>
+              <div id="selectedEventArtists" class="selected-artists"></div>
+            </fieldset>
+            <button class="button" type="submit">Crea evento e invia richieste</button>
+          </form>
+        </article>
+      </div>
     </div>
 
     <template id="statCardTemplate">

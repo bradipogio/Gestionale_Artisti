@@ -32,6 +32,21 @@ body {
     linear-gradient(180deg, #f8eee3 0%, #f7f1ea 48%, #f2e7dd 100%);
 }
 
+body.app-mode .hero {
+  grid-template-columns: 1fr;
+  margin-bottom: 20px;
+}
+
+body.app-mode .hero > div:first-child {
+  display: none;
+}
+
+body.app-mode .login-panel {
+  position: static;
+  max-width: 420px;
+  margin-left: auto;
+}
+
 button,
 input,
 select,
@@ -43,6 +58,10 @@ textarea {
   max-width: 1280px;
   margin: 0 auto;
   padding: 32px 20px 60px;
+}
+
+.app {
+  position: relative;
 }
 
 .hero {
@@ -115,6 +134,63 @@ h2 {
 .toolbar {
   align-items: end;
   margin-bottom: 20px;
+}
+
+.app-topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick-actions {
+  position: relative;
+}
+
+.fab-button {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.quick-actions__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(255, 252, 247, 0.98);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  z-index: 20;
+}
+
+.quick-actions__item {
+  border: 0;
+  border-radius: 14px;
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .toolbar__filters {
@@ -234,12 +310,6 @@ h2 {
   display: block;
   font-size: clamp(2rem, 4vw, 2.8rem);
   margin-bottom: 8px;
-}
-
-.admin-layout {
-  display: grid;
-  gap: 20px;
-  margin-bottom: 20px;
 }
 
 .admin-subsection {
@@ -415,6 +485,34 @@ h2 {
   display: none !important;
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(47, 36, 30, 0.35);
+  backdrop-filter: blur(10px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.modal {
+  width: min(920px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+
+.modal .card {
+  background: rgba(255, 252, 247, 0.98);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .empty-state {
   padding: 20px 0 6px;
 }
@@ -428,6 +526,11 @@ h2 {
 
   .login-panel {
     position: static;
+  }
+
+  .app-topbar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -443,6 +546,7 @@ h2 {
   }
 
   .toolbar,
+  .app-topbar,
   .event-card__top,
   .assignment,
   .artist-option--admin,
@@ -454,5 +558,16 @@ h2 {
 
   .assignment__controls {
     justify-content: flex-start;
+  }
+
+  .topbar-actions,
+  .modal-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fab-button {
+    width: 100%;
+    border-radius: 999px;
   }
 }

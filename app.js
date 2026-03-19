@@ -66,6 +66,7 @@ function cloneSeedState() {
 const state = loadState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
+let activeModal = "";
 
 const elements = {
   app: document.querySelector("#app"),
@@ -75,7 +76,14 @@ const elements = {
   logoutButton: document.querySelector("#logoutButton"),
   sessionInfo: document.querySelector("#sessionInfo"),
   dashboardSection: document.querySelector("#dashboardSection"),
-  adminSection: document.querySelector("#adminSection"),
+  quickActions: document.querySelector("#quickActions"),
+  quickActionsToggle: document.querySelector("#quickActionsToggle"),
+  quickActionsMenu: document.querySelector("#quickActionsMenu"),
+  openEventModal: document.querySelector("#openEventModal"),
+  openArtistModal: document.querySelector("#openArtistModal"),
+  modalOverlay: document.querySelector("#modalOverlay"),
+  eventModal: document.querySelector("#eventModal"),
+  artistModal: document.querySelector("#artistModal"),
   artistForm: document.querySelector("#artistForm"),
   artistId: document.querySelector("#artistId"),
   artistName: document.querySelector("#artistName"),
@@ -130,6 +138,10 @@ function saveState() {
 function bindEvents() {
   elements.loginForm.addEventListener("submit", handleLogin);
   elements.logoutButton.addEventListener("click", handleLogout);
+  elements.quickActionsToggle.addEventListener("click", toggleQuickActionsMenu);
+  elements.openEventModal.addEventListener("click", () => openModal("event"));
+  elements.openArtistModal.addEventListener("click", () => openModal("artist"));
+  elements.modalOverlay.addEventListener("click", handleModalOverlayClick);
   elements.artistForm.addEventListener("submit", handleArtistSubmit);
   elements.cancelArtistEdit.addEventListener("click", resetArtistForm);
   elements.artistsAdminList.addEventListener("click", handleArtistAdminClick);
@@ -148,12 +160,14 @@ function handleLogin(event) {
   event.preventDefault();
   sessionUserId = elements.loginUserId.value;
   localStorage.setItem(SESSION_KEY, sessionUserId);
+  closeModal();
   renderApp();
 }
 
 function handleLogout() {
   sessionUserId = "";
   localStorage.removeItem(SESSION_KEY);
+  closeModal();
   renderApp();
 }
 
@@ -199,6 +213,7 @@ function handleCreateEvent(event) {
   elements.eventForm.reset();
   eventArtistSelection = [];
   renderArtistOptions();
+  closeModal();
   renderApp();
 }
 
@@ -237,6 +252,7 @@ function handleArtistSubmit(event) {
     : `${name} aggiunto. Lo trovi nel roster, nel menu Utente e in "Artisti da contattare".`;
   elements.artistFeedback.classList.remove("hidden");
   resetArtistForm();
+  closeModal();
   renderApp();
 }
 
@@ -253,7 +269,46 @@ function handleArtistAdminClick(event) {
   elements.artistFormTitle.textContent = "Modifica artista";
   elements.artistSubmitButton.textContent = "Salva modifica";
   elements.cancelArtistEdit.classList.remove("hidden");
+  openModal("artist");
   elements.artistName.focus();
+}
+
+function toggleQuickActionsMenu() {
+  const isOpen = !elements.quickActionsMenu.classList.contains("hidden");
+  elements.quickActionsMenu.classList.toggle("hidden", isOpen);
+  elements.quickActionsToggle.setAttribute("aria-expanded", String(!isOpen));
+}
+
+function openModal(type) {
+  activeModal = type;
+  elements.quickActionsMenu.classList.add("hidden");
+  elements.quickActionsToggle.setAttribute("aria-expanded", "false");
+  elements.modalOverlay.classList.remove("hidden");
+  elements.eventModal.classList.toggle("hidden", type !== "event");
+  elements.artistModal.classList.toggle("hidden", type !== "artist");
+
+  if (type === "event") {
+    elements.eventModal.querySelector("input, textarea, select")?.focus();
+  }
+
+  if (type === "artist") {
+    elements.artistName.focus();
+  }
+}
+
+function closeModal() {
+  activeModal = "";
+  elements.modalOverlay.classList.add("hidden");
+  elements.eventModal.classList.add("hidden");
+  elements.artistModal.classList.add("hidden");
+  elements.quickActionsMenu.classList.add("hidden");
+  elements.quickActionsToggle?.setAttribute("aria-expanded", "false");
+}
+
+function handleModalOverlayClick(event) {
+  if (event.target === elements.modalOverlay || event.target.closest("[data-close-modal]")) {
+    closeModal();
+  }
 }
 
 function handleAddEventArtist() {
@@ -326,6 +381,7 @@ function resetArtistForm() {
   elements.artistFormTitle.textContent = "Nuovo artista";
   elements.artistSubmitButton.textContent = "Aggiungi artista";
   elements.cancelArtistEdit.classList.add("hidden");
+  elements.artistFeedback.classList.add("hidden");
 }
 
 function populateLoginUsers() {
@@ -401,6 +457,7 @@ function renderApp() {
   const currentUser = state.users.find((user) => user.id === sessionUserId) || null;
 
   elements.app.classList.toggle("hidden", !currentUser);
+  document.body.classList.toggle("app-mode", Boolean(currentUser));
   elements.logoutButton.classList.toggle("hidden", !currentUser);
   elements.sessionInfo.classList.toggle("hidden", !currentUser);
   elements.loginButton.textContent = currentUser ? "Cambia utente" : "Entra nella webapp";
@@ -420,7 +477,7 @@ function renderApp() {
   const filteredEvents = filterEvents(visibleEvents);
   const summary = getSummary(filteredEvents);
 
-  elements.adminSection.classList.toggle("hidden", currentUser.role !== "admin");
+  elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
   elements.eventsTitle.textContent =
     currentUser.role === "admin" ? "Eventi e richieste" : "Le tue richieste";
   elements.resultsCount.textContent = `${filteredEvents.length} eventi visibili`;
@@ -510,6 +567,7 @@ function getSummary(events) {
   const assignments = events.flatMap((eventItem) => eventItem.assignments);
   return {
     totalEvents: events.length,
+    richiesteAperte: assignments.filter((item) => item.status !== "confermata").length,
     inviati: assignments.filter((item) => item.status === "inviata").length,
     accettati: assignments.filter((item) => item.status === "accettata").length,
     confermati: assignments.filter((item) => item.status === "confermata").length,
@@ -524,6 +582,11 @@ function renderDashboard(summary, role) {
             label: "Eventi aperti",
             value: summary.totalEvents,
             hint: "Tutte le date attualmente visibili con i filtri attivi.",
+          },
+          {
+            label: "Richieste aperte",
+            value: summary.richiesteAperte,
+            hint: "Richieste agli artisti non ancora chiuse come confermate.",
           },
           {
             label: "Da confermare dagli artisti",
@@ -548,6 +611,11 @@ function renderDashboard(summary, role) {
             hint: "Eventi in cui sei stato coinvolto.",
           },
           {
+            label: "Richieste aperte",
+            value: summary.richiesteAperte,
+            hint: "Richieste non ancora chiuse come confermate.",
+          },
+          {
             label: "Da rispondere",
             value: summary.inviati,
             hint: "Richieste che aspettano ancora la tua disponibilita.",
@@ -556,11 +624,6 @@ function renderDashboard(summary, role) {
             label: "Da chiudere",
             value: summary.accettati,
             hint: "Hai accettato, ma il cliente non ha ancora confermato.",
-          },
-          {
-            label: "Confermati",
-            value: summary.confermati,
-            hint: "Date confermate dal cliente.",
           },
         ];
 
