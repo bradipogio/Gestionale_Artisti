@@ -640,6 +640,10 @@ h2 {
   flex-wrap: nowrap;
 }
 
+.event-card__summary-side--admin {
+  flex-wrap: nowrap;
+}
+
 .event-title {
   margin-bottom: 4px;
 }
@@ -718,6 +722,11 @@ h2 {
   gap: 10px;
   align-items: center;
   margin: 14px 0 2px;
+}
+
+.event-body-top--admin {
+  justify-content: flex-start;
+  margin-bottom: 10px;
 }
 
 .event-body-block + .event-body-block {
@@ -953,6 +962,11 @@ h2 {
     align-items: center;
   }
 
+  .event-card__summary-side--admin {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .account-menu__panel {
     position: static;
     width: 100%;
@@ -1047,6 +1061,7 @@ h2 {
   }
 
   .event-card__summary-side,
+  .event-card__summary-side--admin,
   .event-card__summary-side--artist {
     flex-direction: row;
     align-items: center;
@@ -1054,9 +1069,18 @@ h2 {
     gap: 10px;
   }
 
+  .event-card__summary-side--admin {
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
   .event-card--artist .event-card__summary-side {
     gap: 8px;
     flex: 0 0 auto;
+  }
+
+  .event-date-pill {
+    padding-inline: 10px;
   }
 
   .event-card--artist .event-title {

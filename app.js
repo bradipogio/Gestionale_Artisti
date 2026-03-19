@@ -768,16 +768,9 @@ function renderEvents(events, currentUser) {
 }
 
 function renderAdminEventCard(eventItem, currentUser) {
-  const counts = getStatusCounts(eventItem.assignments);
   const assignments = eventItem.assignments
     .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
     .join("");
-  const statusSummary = [
-    formatStatusCount(counts.inviata, "inviata", "inviate"),
-    formatStatusCount(counts.accettata, "accettata", "accettate"),
-    formatStatusCount(counts.confermata, "confermata", "confermate"),
-    formatStatusCount(counts.cancellata, "cancellata", "cancellate"),
-  ].join(" · ");
   const statusDotsMarkup = renderStatusDots(eventItem.assignments);
   const notesMarkup = eventItem.notes
     ? `
@@ -796,22 +789,17 @@ function renderAdminEventCard(eventItem, currentUser) {
             <p class="section-kicker">Evento</p>
             <h3 class="event-title">${eventItem.clientName}</h3>
           </div>
-          <div class="event-card__summary-side">
-            <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
+          <div class="event-card__summary-side event-card__summary-side--admin">
+            <div class="event-status-dots" aria-label="Stato richieste">
+              ${statusDotsMarkup}
+            </div>
+            <span class="pill pill--accent event-date-pill">${formatDate(eventItem.date)}</span>
             <span class="event-card__chevron" aria-hidden="true"></span>
           </div>
         </div>
-        <div class="event-card__summary-meta">
-          <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
-          <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
-          <span class="meta-pill"><strong>Stati</strong>${statusSummary}</span>
-        </div>
-        <div class="event-status-dots" aria-label="Stato richieste">
-          ${statusDotsMarkup}
-        </div>
       </summary>
       <div class="event-card__body">
-        <div class="event-body-top">
+        <div class="event-body-top event-body-top--admin">
           <button
             class="icon-button"
             type="button"
@@ -825,18 +813,13 @@ function renderAdminEventCard(eventItem, currentUser) {
               <path d="M12 6l6 6"></path>
             </svg>
           </button>
-          <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
         </div>
-        <div class="event-status-dots event-status-dots--body" aria-label="Stato richieste">
-          ${statusDotsMarkup}
+        <div class="event-card__summary-meta">
+          <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
+          <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
         </div>
         ${notesMarkup}
-        <div class="event-body-block">
-          <p class="event-body-label">
-            ${formatCount(eventItem.assignments.length, "1 artista coinvolto", `${eventItem.assignments.length} artisti coinvolti`)}
-          </p>
-          <div class="assignment-list">${assignments}</div>
-        </div>
+        <div class="assignment-list">${assignments}</div>
       </div>
     </details>
   `;
