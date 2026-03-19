@@ -179,7 +179,16 @@
               </label>
               <fieldset class="field field--full">
                 <legend>Artisti da contattare</legend>
-                <div id="artistCheckboxes" class="artist-selector"></div>
+                <div class="artist-picker">
+                  <label class="field">
+                    <span>Seleziona artista</span>
+                    <select id="eventArtistSelect"></select>
+                  </label>
+                  <button id="addEventArtist" class="button button--ghost" type="button">
+                    Aggiungi artista
+                  </button>
+                </div>
+                <div id="selectedEventArtists" class="selected-artists"></div>
               </fieldset>
               <button class="button" type="submit">Crea evento e invia richieste</button>
             </form>

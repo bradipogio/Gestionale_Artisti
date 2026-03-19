@@ -65,6 +65,7 @@ function cloneSeedState() {
 
 const state = loadState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
+let eventArtistSelection = [];
 
 const elements = {
   app: document.querySelector("#app"),
@@ -85,7 +86,9 @@ const elements = {
   cancelArtistEdit: document.querySelector("#cancelArtistEdit"),
   artistsAdminList: document.querySelector("#artistsAdminList"),
   eventForm: document.querySelector("#eventForm"),
-  artistCheckboxes: document.querySelector("#artistCheckboxes"),
+  eventArtistSelect: document.querySelector("#eventArtistSelect"),
+  addEventArtist: document.querySelector("#addEventArtist"),
+  selectedEventArtists: document.querySelector("#selectedEventArtists"),
   eventsList: document.querySelector("#eventsList"),
   resultsCount: document.querySelector("#resultsCount"),
   eventsTitle: document.querySelector("#eventsTitle"),
@@ -130,7 +133,9 @@ function bindEvents() {
   elements.artistForm.addEventListener("submit", handleArtistSubmit);
   elements.cancelArtistEdit.addEventListener("click", resetArtistForm);
   elements.artistsAdminList.addEventListener("click", handleArtistAdminClick);
+  elements.addEventArtist.addEventListener("click", handleAddEventArtist);
   elements.eventForm.addEventListener("submit", handleCreateEvent);
+  elements.selectedEventArtists.addEventListener("click", handleSelectedEventArtistsClick);
   elements.eventsList.addEventListener("click", handleEventsClick);
   elements.eventsList.addEventListener("change", handleStatusChange);
   elements.resetFilters.addEventListener("click", resetFilters);
@@ -162,7 +167,7 @@ function handleCreateEvent(event) {
   const notes = String(formData.get("eventNotes")).trim();
   const selectedArtists = state.users
     .filter((user) => user.role === "artist")
-    .filter((artist) => formData.getAll("artistIds").includes(artist.id));
+    .filter((artist) => eventArtistSelection.includes(artist.id));
 
   if (!clientName || !eventDate || !location || !requestedActs) {
     alert("Compila cliente, data, location e richiesta musicale.");
@@ -192,6 +197,8 @@ function handleCreateEvent(event) {
 
   saveState();
   elements.eventForm.reset();
+  eventArtistSelection = [];
+  renderArtistOptions();
   renderApp();
 }
 
@@ -247,6 +254,27 @@ function handleArtistAdminClick(event) {
   elements.artistSubmitButton.textContent = "Salva modifica";
   elements.cancelArtistEdit.classList.remove("hidden");
   elements.artistName.focus();
+}
+
+function handleAddEventArtist() {
+  const artistId = elements.eventArtistSelect.value;
+  if (!artistId) return;
+
+  if (eventArtistSelection.includes(artistId)) {
+    alert("Questo artista e gia stato selezionato.");
+    return;
+  }
+
+  eventArtistSelection.push(artistId);
+  renderArtistOptions();
+}
+
+function handleSelectedEventArtistsClick(event) {
+  const button = event.target.closest("[data-remove-selected-artist]");
+  if (!button) return;
+
+  eventArtistSelection = eventArtistSelection.filter((artistId) => artistId !== button.dataset.artistId);
+  renderArtistOptions();
 }
 
 function handleEventsClick(event) {
@@ -320,19 +348,51 @@ function populateLoginUsers() {
 
 function renderArtistOptions() {
   const artists = state.users.filter((user) => user.role === "artist");
-  elements.artistCheckboxes.innerHTML = artists
+  const availableArtists = artists.filter((artist) => !eventArtistSelection.includes(artist.id));
+
+  elements.eventArtistSelect.innerHTML = `
+    <option value="">Scegli un artista</option>
+    ${availableArtists
+      .map(
+        (artist) => `
+          <option value="${artist.id}">
+            ${artist.name} · ${artist.specialty}
+          </option>
+        `,
+      )
+      .join("")}
+  `;
+
+  if (!eventArtistSelection.length) {
+    elements.selectedEventArtists.innerHTML = `
+      <p class="empty-state">Nessun artista selezionato.</p>
+    `;
+    return;
+  }
+
+  elements.selectedEventArtists.innerHTML = eventArtistSelection
     .map(
-      (artist) => `
-        <div class="artist-option">
-          <label>
-            <input type="checkbox" name="artistIds" value="${artist.id}" />
-            <span>
-              <strong>${artist.name}</strong>
-              <span class="artist-role">${artist.specialty}</span>
-            </span>
-          </label>
+      (artistId) => {
+        const artist = getArtistById(artistId);
+        if (!artist) return "";
+
+        return `
+        <div class="selected-artist">
+          <div>
+            <strong>${artist.name}</strong>
+            <span class="artist-role">${artist.specialty}</span>
+          </div>
+          <button
+            class="button button--ghost"
+            type="button"
+            data-remove-selected-artist="true"
+            data-artist-id="${artist.id}"
+          >
+            Rimuovi
+          </button>
         </div>
-      `,
+      `;
+      },
     )
     .join("");
 }
