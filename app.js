@@ -640,51 +640,41 @@ function renderDashboard(summary, role) {
     role === "admin"
       ? [
           {
-            label: "Eventi aperti",
+            label: "Eventi",
             value: summary.totalEvents,
-            hint: "Tutte le date attualmente visibili con i filtri attivi.",
+            hint: "date visibili",
           },
           {
-            label: "Richieste aperte",
+            label: "Aperte",
             value: summary.richiesteAperte,
-            hint: "Richieste agli artisti non ancora chiuse come confermate.",
+            hint: "richieste attive",
           },
           {
-            label: "Da confermare dagli artisti",
+            label: "In attesa",
             value: summary.inviati,
-            hint: "Richieste inviate ma non ancora accettate.",
+            hint: "senza risposta",
           },
           {
-            label: "Accettati in attesa cliente",
-            value: summary.accettati,
-            hint: "Artisti disponibili, manca la conferma finale del cliente.",
-          },
-          {
-            label: "Date confermate",
+            label: "Confermate",
             value: summary.confermati,
-            hint: "Richieste chiuse e confermate definitivamente.",
+            hint: "chiuse",
           },
         ]
       : [
           {
-            label: "Le tue richieste",
+            label: "Richieste",
             value: summary.totalEvents,
-            hint: "Eventi in cui sei stato coinvolto.",
-          },
-          {
-            label: "Richieste aperte",
-            value: summary.richiesteAperte,
-            hint: "Richieste non ancora chiuse come confermate.",
+            hint: "eventi tuoi",
           },
           {
             label: "Da rispondere",
             value: summary.inviati,
-            hint: "Richieste che aspettano ancora la tua disponibilita.",
+            hint: "in attesa",
           },
           {
             label: "Da chiudere",
             value: summary.accettati,
-            hint: "Hai accettato, ma il cliente non ha ancora confermato.",
+            hint: "ok ma non confermate",
           },
         ];
 
