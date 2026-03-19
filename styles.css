@@ -711,6 +711,11 @@ h2 {
   align-content: start;
 }
 
+.meta-pill--status-control {
+  gap: 6px;
+  min-width: 132px;
+}
+
 .event-card__body {
   padding: 0 16px 16px;
   border-top: 1px solid var(--line);
@@ -760,17 +765,35 @@ h2 {
   padding-top: 12px;
 }
 
-.artist-response-card {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(94, 67, 51, 0.08);
+.status-pill-select {
+  appearance: none;
+  min-width: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 28px 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.2 4.2 6 8l3.8-3.8' fill='none' stroke='%235e4333' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 10px;
+  cursor: pointer;
 }
 
-.artist-response-card--final {
-  padding-block: 16px;
+.status-pill-select--inviata {
+  background-color: #f7d6a0;
+  color: #9a5a00;
+}
+
+.status-pill-select--accettata {
+  background-color: #f6e6a8;
+  color: #866300;
+}
+
+.status-pill-select--cancellata {
+  background-color: #f4c7c3;
+  color: #a1332d;
 }
 
 .icon-button {

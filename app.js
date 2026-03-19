@@ -165,6 +165,8 @@ function bindEvents() {
   elements.addEventArtist.addEventListener("click", handleAddEventArtist);
   elements.eventForm.addEventListener("submit", handleCreateEvent);
   elements.selectedEventArtists.addEventListener("click", handleSelectedEventArtistsClick);
+  elements.eventsList.addEventListener("pointerdown", handleSummaryControlPointer, true);
+  elements.eventsList.addEventListener("click", handleSummaryControlPointer, true);
   elements.eventsList.addEventListener("click", handleEventsClick);
   elements.eventsList.addEventListener("change", handleStatusChange);
   elements.eventsList.addEventListener("toggle", handleEventCardToggle, true);
@@ -442,6 +444,12 @@ function handleStatusChange(event) {
   assignment.updatedAt = new Date().toISOString();
   saveState();
   renderApp();
+}
+
+function handleSummaryControlPointer(event) {
+  if (event.target.closest(".status-pill-select")) {
+    event.stopPropagation();
+  }
 }
 
 function handleEventCardToggle(event) {
@@ -827,8 +835,8 @@ function renderAdminEventCard(eventItem, currentUser) {
 
 function renderArtistEventCard(eventItem, currentUser) {
   const assignment = eventItem.assignments[0];
-  const statusLabel = capitalize(assignment.status);
   const statusDotsMarkup = renderStatusDots(eventItem.assignments);
+  const artistStatusControl = renderArtistStatusControl(eventItem, assignment);
   const notesMarkup = eventItem.notes
     ? `
       <div class="event-body-block">
@@ -859,10 +867,9 @@ function renderArtistEventCard(eventItem, currentUser) {
         <div class="event-card__summary-meta">
           <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
           <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
-          <span class="meta-pill meta-pill--status"><strong>Il tuo stato</strong><span class="status-badge status--${assignment.status}">${statusLabel}</span></span>
+          ${artistStatusControl}
         </div>
         ${notesMarkup}
-        ${renderArtistResponse(eventItem, assignment)}
       </div>
     </details>
   `;
@@ -933,34 +940,36 @@ function renderAssignment(eventItem, assignment, currentUser) {
   `;
 }
 
-function renderArtistResponse(eventItem, assignment) {
+function renderArtistStatusControl(eventItem, assignment) {
   if (assignment.status === "confermata") {
     return `
-      <div class="artist-response-card artist-response-card--final">
+      <span class="meta-pill meta-pill--status-control">
+        <strong>Stato</strong>
         <span class="status-badge status--confermata">Confermata</span>
-      </div>
+      </span>
     `;
   }
 
   return `
-    <div class="artist-response-card">
+    <label class="meta-pill meta-pill--status-control">
+      <strong>Stato</strong>
       <select
-        class="status-select status-select--response"
+        class="status-pill-select status-pill-select--${assignment.status}"
         data-assignment-status="true"
         data-event-id="${eventItem.id}"
         data-assignment-id="${assignment.id}"
       >
         <option value="" ${assignment.status === "inviata" ? "selected" : ""} disabled hidden>
-          Rispondi
+          In attesa
         </option>
         <option value="accettata" ${assignment.status === "accettata" ? "selected" : ""}>
           Accettata
         </option>
         <option value="cancellata" ${assignment.status === "cancellata" ? "selected" : ""}>
-          Cancellata
+          Non accettata
         </option>
       </select>
-    </div>
+    </label>
   `;
 }
 
