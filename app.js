@@ -396,6 +396,7 @@ function handleEventsClick(event) {
 function handleStatusChange(event) {
   const select = event.target.closest("[data-assignment-status]");
   if (!select) return;
+  if (!select.value) return;
 
   const eventId = select.dataset.eventId;
   const assignmentId = select.dataset.assignmentId;
@@ -534,7 +535,9 @@ function renderApp() {
   elements.sessionInfo.innerHTML = `
     <strong>${currentUser.name}</strong><br />
     ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
-    Usa il menu Utente per cambiare accesso.
+    ${currentUser.role === "admin"
+      ? "Gestisci tutti gli stati dal menu operativo."
+      : "Puoi rispondere solo con accettata o cancellata."}
   `;
   elements.accountMenuLabel.textContent = currentUser.name;
   elements.accountUserId.value = currentUser.id;
@@ -641,10 +644,13 @@ function getSummary(events) {
   const assignments = events.flatMap((eventItem) => eventItem.assignments);
   return {
     totalEvents: events.length,
-    richiesteAperte: assignments.filter((item) => item.status !== "confermata").length,
+    richiesteAperte: assignments.filter(
+      (item) => item.status !== "confermata" && item.status !== "cancellata",
+    ).length,
     inviati: assignments.filter((item) => item.status === "inviata").length,
     accettati: assignments.filter((item) => item.status === "accettata").length,
     confermati: assignments.filter((item) => item.status === "confermata").length,
+    cancellati: assignments.filter((item) => item.status === "cancellata").length,
   };
 }
 
@@ -672,6 +678,11 @@ function renderDashboard(summary, role) {
             value: summary.confermati,
             hint: "chiuse",
           },
+          {
+            label: "Cancellate",
+            value: summary.cancellati,
+            hint: "annullate",
+          },
         ]
       : [
           {
@@ -685,9 +696,19 @@ function renderDashboard(summary, role) {
             hint: "in attesa",
           },
           {
-            label: "Da chiudere",
+            label: "Accettate",
             value: summary.accettati,
-            hint: "ok ma non confermate",
+            hint: "in attesa cliente",
+          },
+          {
+            label: "Confermate",
+            value: summary.confermati,
+            hint: "chiuse",
+          },
+          {
+            label: "Cancellate",
+            value: summary.cancellati,
+            hint: "non disponibili",
           },
         ];
 
@@ -718,9 +739,10 @@ function renderEvents(events, currentUser) {
         .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
         .join("");
       const statusSummary = [
-        `${counts.inviata} inviate`,
-        `${counts.accettata} accettate`,
-        `${counts.confermata} confermate`,
+        formatStatusCount(counts.inviata, "inviata", "inviate"),
+        formatStatusCount(counts.accettata, "accettata", "accettate"),
+        formatStatusCount(counts.confermata, "confermata", "confermate"),
+        formatStatusCount(counts.cancellata, "cancellata", "cancellate"),
       ].join(" · ");
       const notesMarkup = eventItem.notes
         ? `
@@ -777,7 +799,7 @@ function renderAssignment(eventItem, assignment, currentUser) {
         data-event-id="${eventItem.id}"
         data-assignment-id="${assignment.id}"
       >
-        ${["inviata", "accettata", "confermata"]
+        ${["inviata", "accettata", "confermata", "cancellata"]
           .map(
             (status) => `
               <option value="${status}" ${assignment.status === status ? "selected" : ""}>
@@ -788,19 +810,33 @@ function renderAssignment(eventItem, assignment, currentUser) {
           .join("")}
       </select>
     `
-    : assignment.status === "inviata"
+    : assignment.status !== "confermata"
       ? `
-        <button
-          class="button"
-          type="button"
-          data-action="artist-accept"
-          data-event-id="${eventItem.id}"
-          data-assignment-id="${assignment.id}"
-        >
-          Confermo disponibilita
-        </button>
-      `
-      : "";
+      <select
+        class="status-select status-select--response"
+        data-assignment-status="true"
+        data-event-id="${eventItem.id}"
+        data-assignment-id="${assignment.id}"
+      >
+        <option value="" ${assignment.status === "inviata" ? "selected" : ""} disabled hidden>
+          Rispondi
+        </option>
+        <option value="accettata" ${assignment.status === "accettata" ? "selected" : ""}>
+          Accettata
+        </option>
+        <option value="cancellata" ${assignment.status === "cancellata" ? "selected" : ""}>
+          Cancellata
+        </option>
+      </select>
+      ${assignment.status === "inviata" ? `
+        <span class="assignment__hint">Scegli se accettare o cancellare.</span>
+      ` : ""}
+    `
+      : `
+        <span class="assignment__hint assignment__hint--final">
+          Richiesta chiusa definitivamente.
+        </span>
+      `;
 
   return `
     <div class="assignment">
@@ -846,8 +882,12 @@ function getStatusCounts(assignments) {
       accumulator[assignment.status] += 1;
       return accumulator;
     },
-    { inviata: 0, accettata: 0, confermata: 0 },
+    { inviata: 0, accettata: 0, confermata: 0, cancellata: 0 },
   );
+}
+
+function formatStatusCount(value, singularLabel, pluralLabel) {
+  return `${value} ${value === 1 ? singularLabel : pluralLabel}`;
 }
 
 function getFiltersSummary() {
