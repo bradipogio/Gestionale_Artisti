@@ -70,14 +70,21 @@ let activeModal = "";
 
 const elements = {
   app: document.querySelector("#app"),
-  accountPanel: document.querySelector("#accountPanel"),
-  accountSummaryTitle: document.querySelector("#accountSummaryTitle"),
-  accountSummaryMeta: document.querySelector("#accountSummaryMeta"),
   loginForm: document.querySelector("#loginForm"),
   loginUserId: document.querySelector("#loginUserId"),
   loginButton: document.querySelector("#loginButton"),
+  accountForm: document.querySelector("#accountForm"),
+  accountUserId: document.querySelector("#accountUserId"),
+  accountMenu: document.querySelector("#accountMenu"),
+  accountMenuLabel: document.querySelector("#accountMenuLabel"),
   logoutButton: document.querySelector("#logoutButton"),
   sessionInfo: document.querySelector("#sessionInfo"),
+  toggleFiltersPanel: document.querySelector("#toggleFiltersPanel"),
+  toggleDashboardPanel: document.querySelector("#toggleDashboardPanel"),
+  toggleAgendaPanel: document.querySelector("#toggleAgendaPanel"),
+  filtersPanel: document.querySelector("#filtersPanel"),
+  dashboardPanel: document.querySelector("#dashboardPanel"),
+  agendaPanel: document.querySelector("#agendaPanel"),
   dashboardSection: document.querySelector("#dashboardSection"),
   quickActions: document.querySelector("#quickActions"),
   quickActionsToggle: document.querySelector("#quickActionsToggle"),
@@ -101,8 +108,6 @@ const elements = {
   addEventArtist: document.querySelector("#addEventArtist"),
   selectedEventArtists: document.querySelector("#selectedEventArtists"),
   eventsList: document.querySelector("#eventsList"),
-  resultsCount: document.querySelector("#resultsCount"),
-  eventsTitle: document.querySelector("#eventsTitle"),
   filtersSummary: document.querySelector("#filtersSummary"),
   dashboardSummary: document.querySelector("#dashboardSummary"),
   agendaSummary: document.querySelector("#agendaSummary"),
@@ -142,8 +147,18 @@ function saveState() {
 }
 
 function bindEvents() {
-  elements.loginForm.addEventListener("submit", handleLogin);
+  elements.loginForm.addEventListener("submit", handleSessionSubmit);
+  elements.accountForm.addEventListener("submit", handleSessionSubmit);
   elements.logoutButton.addEventListener("click", handleLogout);
+  elements.toggleFiltersPanel.addEventListener("click", () =>
+    togglePanel(elements.filtersPanel, elements.toggleFiltersPanel),
+  );
+  elements.toggleDashboardPanel.addEventListener("click", () =>
+    togglePanel(elements.dashboardPanel, elements.toggleDashboardPanel),
+  );
+  elements.toggleAgendaPanel.addEventListener("click", () =>
+    togglePanel(elements.agendaPanel, elements.toggleAgendaPanel),
+  );
   elements.quickActionsToggle.addEventListener("click", toggleQuickActionsMenu);
   elements.openEventModal.addEventListener("click", () => openModal("event"));
   elements.openArtistModal.addEventListener("click", () => openModal("artist"));
@@ -160,19 +175,23 @@ function bindEvents() {
   elements.filterFrom.addEventListener("input", renderApp);
   elements.filterTo.addEventListener("input", renderApp);
   elements.filterText.addEventListener("input", renderApp);
+  document.addEventListener("click", handleDocumentClick);
 }
 
-function handleLogin(event) {
+function handleSessionSubmit(event) {
   event.preventDefault();
-  sessionUserId = elements.loginUserId.value;
-  localStorage.setItem(SESSION_KEY, sessionUserId);
-  closeModal();
-  renderApp();
+  const nextUserId =
+    event.currentTarget === elements.accountForm
+      ? elements.accountUserId.value
+      : elements.loginUserId.value;
+  updateSessionUser(nextUserId);
 }
 
 function handleLogout() {
   sessionUserId = "";
   localStorage.removeItem(SESSION_KEY);
+  populateLoginUsers();
+  elements.accountMenu.open = false;
   closeModal();
   renderApp();
 }
@@ -280,9 +299,24 @@ function handleArtistAdminClick(event) {
 }
 
 function toggleQuickActionsMenu() {
+  elements.accountMenu.open = false;
   const isOpen = !elements.quickActionsMenu.classList.contains("hidden");
   elements.quickActionsMenu.classList.toggle("hidden", isOpen);
   elements.quickActionsToggle.setAttribute("aria-expanded", String(!isOpen));
+}
+
+function handleDocumentClick(event) {
+  if (
+    !event.target.closest("#quickActions") &&
+    !elements.quickActionsMenu.classList.contains("hidden")
+  ) {
+    elements.quickActionsMenu.classList.add("hidden");
+    elements.quickActionsToggle.setAttribute("aria-expanded", "false");
+  }
+
+  if (!event.target.closest("#accountMenu")) {
+    elements.accountMenu.open = false;
+  }
 }
 
 function openModal(type) {
@@ -391,7 +425,7 @@ function resetArtistForm() {
 }
 
 function populateLoginUsers() {
-  elements.loginUserId.innerHTML = state.users
+  const optionsMarkup = state.users
     .map(
       (user) => `
         <option value="${user.id}">
@@ -401,10 +435,15 @@ function populateLoginUsers() {
     )
     .join("");
 
+  elements.loginUserId.innerHTML = optionsMarkup;
+  elements.accountUserId.innerHTML = optionsMarkup;
+
   if (!sessionUserId) {
     elements.loginUserId.value = state.users[0].id;
+    elements.accountUserId.value = state.users[0].id;
   } else {
     elements.loginUserId.value = sessionUserId;
+    elements.accountUserId.value = sessionUserId;
   }
 }
 
@@ -464,19 +503,18 @@ function renderApp() {
 
   elements.app.classList.toggle("hidden", !currentUser);
   document.body.classList.toggle("app-mode", Boolean(currentUser));
-  elements.logoutButton.classList.toggle("hidden", !currentUser);
-  elements.sessionInfo.classList.toggle("hidden", !currentUser);
-  elements.loginButton.textContent = currentUser ? "Cambia utente" : "Entra nella webapp";
+  elements.loginButton.textContent = "Entra nella webapp";
 
   if (!currentUser) {
-    elements.accountSummaryTitle.textContent = "Accesso demo";
-    elements.accountSummaryMeta.textContent = "Seleziona utente";
-    elements.accountPanel.open = true;
+    elements.accountMenu.open = false;
+    elements.accountMenuLabel.textContent = "Profilo";
     elements.sessionInfo.textContent = "";
-    elements.resultsCount.textContent = "";
     elements.filtersSummary.textContent = "Nessun filtro";
     elements.dashboardSummary.textContent = "0 eventi analizzati";
     elements.agendaSummary.textContent = "0 schede";
+    setPanelState(elements.filtersPanel, elements.toggleFiltersPanel, false);
+    setPanelState(elements.dashboardPanel, elements.toggleDashboardPanel, false);
+    setPanelState(elements.agendaPanel, elements.toggleAgendaPanel, true);
     return;
   }
 
@@ -485,23 +523,14 @@ function renderApp() {
     ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
     Usa il menu Utente per cambiare accesso.
   `;
-  elements.accountSummaryTitle.textContent = currentUser.name;
-  elements.accountSummaryMeta.textContent =
-    currentUser.role === "admin" ? "Vista amministratore" : currentUser.specialty;
-  elements.accountPanel.open = false;
+  elements.accountMenuLabel.textContent = currentUser.name;
+  elements.accountUserId.value = currentUser.id;
 
   const visibleEvents = getVisibleEvents(currentUser);
   const filteredEvents = filterEvents(visibleEvents);
   const summary = getSummary(filteredEvents);
 
   elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
-  elements.eventsTitle.textContent =
-    currentUser.role === "admin" ? "Eventi e richieste" : "Le tue richieste";
-  elements.resultsCount.textContent = formatCount(
-    filteredEvents.length,
-    "1 evento visibile",
-    `${filteredEvents.length} eventi visibili`,
-  );
   elements.filtersSummary.textContent = getFiltersSummary();
   elements.dashboardSummary.textContent = formatCount(
     filteredEvents.length,
@@ -680,7 +709,7 @@ function renderEvents(events, currentUser) {
   }
 
   elements.eventsList.innerHTML = events
-    .map((eventItem, index) => {
+    .map((eventItem) => {
       const counts = getStatusCounts(eventItem.assignments);
       const assignments = eventItem.assignments
         .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
@@ -700,7 +729,7 @@ function renderEvents(events, currentUser) {
         : "";
 
       return `
-        <details class="event-card" ${index === 0 ? "open" : ""}>
+        <details class="event-card">
           <summary class="event-card__summary">
             <div class="event-card__summary-row">
               <div>
@@ -782,6 +811,26 @@ function renderAssignment(eventItem, assignment, currentUser) {
       </div>
     </div>
   `;
+}
+
+function updateSessionUser(nextUserId) {
+  sessionUserId = nextUserId;
+  localStorage.setItem(SESSION_KEY, sessionUserId);
+  populateLoginUsers();
+  elements.accountMenu.open = false;
+  closeModal();
+  renderApp();
+}
+
+function togglePanel(panel, button) {
+  const isHidden = panel.classList.contains("hidden");
+  setPanelState(panel, button, isHidden);
+}
+
+function setPanelState(panel, button, isOpen) {
+  panel.classList.toggle("hidden", !isOpen);
+  button.classList.toggle("utility-button--active", isOpen);
+  button.setAttribute("aria-pressed", String(isOpen));
 }
 
 function getArtistById(artistId) {

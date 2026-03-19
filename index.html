@@ -23,43 +23,89 @@
             chi ha risposto o e ancora in attesa.
           </p>
         </div>
-        <details id="accountPanel" class="login-panel fold-card card" open>
-          <summary class="fold-card__summary">
-            <div>
-              <p class="section-kicker">Accesso</p>
-              <h2 id="accountSummaryTitle">Accesso demo</h2>
-            </div>
-            <div class="fold-card__aside">
-              <span id="accountSummaryMeta" class="pill">Seleziona utente</span>
-              <span class="fold-card__chevron" aria-hidden="true"></span>
-            </div>
-          </summary>
-          <div class="fold-card__body">
-            <form id="loginForm" class="stack">
-              <label class="field">
-                <span>Utente</span>
-                <select id="loginUserId"></select>
-              </label>
-              <button id="loginButton" class="button" type="submit">Entra nella webapp</button>
-            </form>
-            <div class="login-panel__footer">
-              <div id="sessionInfo" class="session-info hidden"></div>
-              <button id="logoutButton" class="button button--ghost hidden" type="button">
-                Esci
-              </button>
-            </div>
+        <div class="login-panel card">
+          <div class="login-panel__head">
+            <span class="pill">Accesso demo</span>
           </div>
-        </details>
+          <form id="loginForm" class="stack">
+            <label class="field">
+              <span>Utente</span>
+              <select id="loginUserId"></select>
+            </label>
+            <button id="loginButton" class="button" type="submit">Entra nella webapp</button>
+          </form>
+        </div>
       </header>
 
       <main id="app" class="app hidden">
         <section class="app-topbar card">
-          <div>
-            <p class="section-kicker">Agenda</p>
-            <h2 id="eventsTitle">Eventi e richieste</h2>
+          <div class="utility-buttons" aria-label="Controlli interfaccia">
+            <button
+              id="toggleFiltersPanel"
+              class="utility-button"
+              type="button"
+              aria-controls="filtersPanel"
+              aria-pressed="false"
+              title="Filtri"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="6"></circle>
+                <path d="M20 20l-4.2-4.2"></path>
+              </svg>
+            </button>
+            <button
+              id="toggleDashboardPanel"
+              class="utility-button"
+              type="button"
+              aria-controls="dashboardPanel"
+              aria-pressed="false"
+              title="Quadro operativo"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="6" height="6" rx="1"></rect>
+                <rect x="14" y="4" width="6" height="10" rx="1"></rect>
+                <rect x="4" y="14" width="6" height="6" rx="1"></rect>
+                <rect x="14" y="16" width="6" height="4" rx="1"></rect>
+              </svg>
+            </button>
+            <button
+              id="toggleAgendaPanel"
+              class="utility-button utility-button--active"
+              type="button"
+              aria-controls="agendaPanel"
+              aria-pressed="true"
+              title="Agenda"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="6" width="16" height="14" rx="2"></rect>
+                <path d="M8 4v4"></path>
+                <path d="M16 4v4"></path>
+                <path d="M4 10h16"></path>
+              </svg>
+            </button>
           </div>
           <div class="topbar-actions">
-            <span id="resultsCount" class="pill"></span>
+            <details id="accountMenu" class="account-menu">
+              <summary class="account-menu__toggle">
+                <span id="accountMenuLabel">Profilo</span>
+                <span class="account-menu__chevron" aria-hidden="true"></span>
+              </summary>
+              <div class="account-menu__panel">
+                <div id="sessionInfo" class="session-info"></div>
+                <form id="accountForm" class="account-menu__form">
+                  <label class="field">
+                    <span>Utente</span>
+                    <select id="accountUserId"></select>
+                  </label>
+                  <button id="accountSwitchButton" class="button button--ghost" type="submit">
+                    Cambia utente
+                  </button>
+                </form>
+                <button id="logoutButton" class="button button--ghost" type="button">
+                  Esci
+                </button>
+              </div>
+            </details>
             <div id="quickActions" class="quick-actions hidden">
               <button id="quickActionsToggle" class="fab-button" type="button" aria-expanded="false">
                 +
@@ -77,73 +123,44 @@
         </section>
 
         <div class="panel-stack">
-          <details class="fold-card card" open>
-            <summary class="fold-card__summary">
-              <div>
-                <p class="section-kicker">Filtro rapido</p>
-                <h2>Ricerca per data</h2>
-              </div>
-              <div class="fold-card__aside">
-                <span id="filtersSummary" class="pill">Nessun filtro</span>
-                <span class="fold-card__chevron" aria-hidden="true"></span>
-              </div>
-            </summary>
-            <div class="fold-card__body">
-              <div class="toolbar__filters">
-                <label class="field">
-                  <span>Dal</span>
-                  <input id="filterFrom" type="date" />
-                </label>
-                <label class="field">
-                  <span>Al</span>
-                  <input id="filterTo" type="date" />
-                </label>
-                <label class="field field--search">
-                  <span>Ricerca testo</span>
-                  <input
-                    id="filterText"
-                    type="search"
-                    placeholder="Cliente, location, artista o tipo di formazione"
-                  />
-                </label>
-                <button id="resetFilters" class="button button--ghost" type="button">
-                  Reset
-                </button>
-              </div>
+          <section id="filtersPanel" class="utility-panel card hidden">
+            <div class="utility-panel__head">
+              <span class="pill" id="filtersSummary">Nessun filtro</span>
+              <button id="resetFilters" class="button button--ghost" type="button">Reset</button>
             </div>
-          </details>
+            <div class="toolbar__filters">
+              <label class="field">
+                <span>Dal</span>
+                <input id="filterFrom" type="date" />
+              </label>
+              <label class="field">
+                <span>Al</span>
+                <input id="filterTo" type="date" />
+              </label>
+              <label class="field field--search">
+                <span>Ricerca testo</span>
+                <input
+                  id="filterText"
+                  type="search"
+                  placeholder="Cliente, location, artista o tipo di formazione"
+                />
+              </label>
+            </div>
+          </section>
 
-          <details class="fold-card card" open>
-            <summary class="fold-card__summary">
-              <div>
-                <p class="section-kicker">Panoramica</p>
-                <h2>Quadro operativo</h2>
-              </div>
-              <div class="fold-card__aside">
-                <span id="dashboardSummary" class="pill">0 eventi analizzati</span>
-                <span class="fold-card__chevron" aria-hidden="true"></span>
-              </div>
-            </summary>
-            <div class="fold-card__body">
-              <section id="dashboardSection" class="dashboard"></section>
+          <section id="dashboardPanel" class="utility-panel card hidden">
+            <div class="utility-panel__head">
+              <span class="pill" id="dashboardSummary">0 eventi analizzati</span>
             </div>
-          </details>
+            <section id="dashboardSection" class="dashboard"></section>
+          </section>
 
-          <details class="fold-card card" open>
-            <summary class="fold-card__summary">
-              <div>
-                <p class="section-kicker">Agenda</p>
-                <h2>Vista calendario operativo</h2>
-              </div>
-              <div class="fold-card__aside">
-                <span id="agendaSummary" class="pill pill--accent">0 schede</span>
-                <span class="fold-card__chevron" aria-hidden="true"></span>
-              </div>
-            </summary>
-            <div class="fold-card__body">
-              <div id="eventsList" class="events-list"></div>
+          <section id="agendaPanel" class="utility-panel utility-panel--agenda card">
+            <div class="utility-panel__head">
+              <span id="agendaSummary" class="pill pill--accent">0 schede</span>
             </div>
-          </details>
+            <div id="eventsList" class="events-list"></div>
+          </section>
         </div>
       </main>
     </div>
