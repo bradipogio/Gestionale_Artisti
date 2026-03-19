@@ -235,11 +235,21 @@
               <p class="section-kicker">Admin</p>
               <h2 id="eventModalTitle">Nuovo evento</h2>
             </div>
-            <button class="button button--ghost" type="button" data-close-modal="true">
-              Chiudi
-            </button>
+            <div class="modal-actions">
+              <button
+                id="cancelEventEdit"
+                class="button button--ghost hidden"
+                type="button"
+              >
+                Annulla modifica
+              </button>
+              <button class="button button--ghost" type="button" data-close-modal="true">
+                Chiudi
+              </button>
+            </div>
           </div>
           <form id="eventForm" class="form-grid">
+            <input id="eventId" name="eventId" type="hidden" />
             <label class="field">
               <span>Cliente</span>
               <input
@@ -296,7 +306,9 @@
               </div>
               <div id="selectedEventArtists" class="selected-artists"></div>
             </fieldset>
-            <button class="button" type="submit">Crea evento e invia richieste</button>
+            <button id="eventSubmitButton" class="button" type="submit">
+              Crea evento e invia richieste
+            </button>
           </form>
         </article>
       </div>

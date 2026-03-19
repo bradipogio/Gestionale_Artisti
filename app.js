@@ -105,6 +105,10 @@ const elements = {
   cancelArtistEdit: document.querySelector("#cancelArtistEdit"),
   artistsAdminList: document.querySelector("#artistsAdminList"),
   eventForm: document.querySelector("#eventForm"),
+  eventId: document.querySelector("#eventId"),
+  eventModalTitle: document.querySelector("#eventModalTitle"),
+  eventSubmitButton: document.querySelector("#eventSubmitButton"),
+  cancelEventEdit: document.querySelector("#cancelEventEdit"),
   eventArtistSelect: document.querySelector("#eventArtistSelect"),
   addEventArtist: document.querySelector("#addEventArtist"),
   selectedEventArtists: document.querySelector("#selectedEventArtists"),
@@ -161,11 +165,15 @@ function bindEvents() {
     togglePanel(elements.agendaPanel, elements.toggleAgendaPanel),
   );
   elements.quickActionsToggle.addEventListener("click", toggleQuickActionsMenu);
-  elements.openEventModal.addEventListener("click", () => openModal("event"));
+  elements.openEventModal.addEventListener("click", () => {
+    resetEventForm();
+    openModal("event");
+  });
   elements.openArtistModal.addEventListener("click", () => openModal("artist"));
   elements.modalOverlay.addEventListener("click", handleModalOverlayClick);
   elements.artistForm.addEventListener("submit", handleArtistSubmit);
   elements.cancelArtistEdit.addEventListener("click", resetArtistForm);
+  elements.cancelEventEdit.addEventListener("click", resetEventForm);
   elements.artistsAdminList.addEventListener("click", handleArtistAdminClick);
   elements.addEventArtist.addEventListener("click", handleAddEventArtist);
   elements.eventForm.addEventListener("submit", handleCreateEvent);
@@ -201,6 +209,7 @@ function handleLogout() {
 function handleCreateEvent(event) {
   event.preventDefault();
   const formData = new FormData(elements.eventForm);
+  const eventId = String(formData.get("eventId") || "").trim();
   const clientName = String(formData.get("clientName")).trim();
   const eventDate = String(formData.get("eventDate"));
   const location = String(formData.get("location")).trim();
@@ -220,26 +229,51 @@ function handleCreateEvent(event) {
     return;
   }
 
-  state.events.unshift({
-    id: crypto.randomUUID(),
-    clientName,
-    date: eventDate,
-    location,
-    requestedActs,
-    notes,
-    assignments: selectedArtists.map((artist) => ({
+  if (eventId) {
+    const eventItem = state.events.find((item) => item.id === eventId);
+    if (!eventItem) return;
+
+    eventItem.clientName = clientName;
+    eventItem.date = eventDate;
+    eventItem.location = location;
+    eventItem.requestedActs = requestedActs;
+    eventItem.notes = notes;
+
+    const existingAssignments = new Map(
+      eventItem.assignments.map((assignment) => [assignment.artistId, assignment]),
+    );
+
+    eventItem.assignments = selectedArtists.map((artist) => {
+      const existingAssignment = existingAssignments.get(artist.id);
+      return (
+        existingAssignment || {
+          id: crypto.randomUUID(),
+          artistId: artist.id,
+          status: "inviata",
+          updatedAt: new Date().toISOString(),
+        }
+      );
+    });
+  } else {
+    state.events.unshift({
       id: crypto.randomUUID(),
-      artistId: artist.id,
-      status: "inviata",
-      updatedAt: new Date().toISOString(),
-    })),
-    createdAt: new Date().toISOString(),
-  });
+      clientName,
+      date: eventDate,
+      location,
+      requestedActs,
+      notes,
+      assignments: selectedArtists.map((artist) => ({
+        id: crypto.randomUUID(),
+        artistId: artist.id,
+        status: "inviata",
+        updatedAt: new Date().toISOString(),
+      })),
+      createdAt: new Date().toISOString(),
+    });
+  }
 
   saveState();
-  elements.eventForm.reset();
-  eventArtistSelection = [];
-  renderArtistOptions();
+  resetEventForm();
   closeModal();
   renderApp();
 }
@@ -375,6 +409,15 @@ function handleSelectedEventArtistsClick(event) {
 }
 
 function handleEventsClick(event) {
+  const editButton = event.target.closest("[data-edit-event]");
+  if (editButton) {
+    const eventItem = state.events.find((item) => item.id === editButton.dataset.eventId);
+    if (!eventItem) return;
+
+    startEventEdit(eventItem);
+    return;
+  }
+
   const action = event.target.closest("[data-action]");
   if (!action) return;
 
@@ -436,6 +479,32 @@ function resetArtistForm() {
   elements.artistSubmitButton.textContent = "Aggiungi artista";
   elements.cancelArtistEdit.classList.add("hidden");
   elements.artistFeedback.classList.add("hidden");
+}
+
+function resetEventForm() {
+  elements.eventForm.reset();
+  elements.eventId.value = "";
+  elements.eventModalTitle.textContent = "Nuovo evento";
+  elements.eventSubmitButton.textContent = "Crea evento e invia richieste";
+  elements.cancelEventEdit.classList.add("hidden");
+  eventArtistSelection = [];
+  renderArtistOptions();
+}
+
+function startEventEdit(eventItem) {
+  resetEventForm();
+  elements.eventId.value = eventItem.id;
+  elements.eventModalTitle.textContent = "Modifica evento";
+  elements.eventSubmitButton.textContent = "Salva modifiche";
+  elements.cancelEventEdit.classList.remove("hidden");
+  elements.eventForm.elements.clientName.value = eventItem.clientName;
+  elements.eventForm.elements.eventDate.value = eventItem.date;
+  elements.eventForm.elements.location.value = eventItem.location;
+  elements.eventForm.elements.requestedActs.value = eventItem.requestedActs;
+  elements.eventForm.elements.eventNotes.value = eventItem.notes || "";
+  eventArtistSelection = eventItem.assignments.map((assignment) => assignment.artistId);
+  renderArtistOptions();
+  openModal("event");
 }
 
 function populateLoginUsers() {
@@ -752,6 +821,27 @@ function renderEvents(events, currentUser) {
           </div>
         `
         : "";
+      const editButtonMarkup =
+        currentUser.role === "admin"
+          ? `
+            <div class="event-body-top">
+              <button
+                class="icon-button"
+                type="button"
+                data-edit-event="true"
+                data-event-id="${eventItem.id}"
+                aria-label="Modifica evento"
+                title="Modifica evento"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 20l4.2-1 9-9a1.6 1.6 0 0 0 0-2.3l-1.9-1.9a1.6 1.6 0 0 0-2.3 0l-9 9L4 20z"></path>
+                  <path d="M12 6l6 6"></path>
+                </svg>
+              </button>
+              <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
+            </div>
+          `
+          : "";
 
       return `
         <details class="event-card" data-event-id="${eventItem.id}" ${openEventIds.has(eventItem.id) ? "open" : ""}>
@@ -773,6 +863,7 @@ function renderEvents(events, currentUser) {
             </div>
           </summary>
           <div class="event-card__body">
+            ${editButtonMarkup}
             ${notesMarkup}
             <div class="event-body-block">
               <p class="event-body-label">
