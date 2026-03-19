@@ -680,12 +680,16 @@ h2 {
   background: #f6e6a8;
 }
 
+.status-dot--non_accettata {
+  background: #f4c7c3;
+}
+
 .status-dot--confermata {
   background: #d9ebdf;
 }
 
 .status-dot--cancellata {
-  background: #f4c7c3;
+  background: #efb4ae;
 }
 
 .meta-pill {
@@ -791,7 +795,7 @@ h2 {
   color: #866300;
 }
 
-.status-pill-select--cancellata {
+.status-pill-select--non_accettata {
   background-color: #f4c7c3;
   color: #a1332d;
 }
@@ -890,14 +894,19 @@ h2 {
   color: #866300;
 }
 
+.status--non_accettata {
+  background: #f4c7c3;
+  color: #a1332d;
+}
+
 .status--confermata {
   background: #d9ebdf;
   color: #2f7a58;
 }
 
 .status--cancellata {
-  background: #f4c7c3;
-  color: #a1332d;
+  background: #efb4ae;
+  color: #952c22;
 }
 
 .status-select {

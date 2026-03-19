@@ -1,6 +1,35 @@
 const STORAGE_KEY = "gestionale-artisti-state-v1";
 const SESSION_KEY = "gestionale-artisti-session-v1";
 
+const ASSIGNMENT_STATUSES = {
+  pending: "inviata",
+  accepted: "accettata",
+  declined: "non_accettata",
+  confirmed: "confermata",
+  cancelled: "cancellata",
+};
+
+const STATUS_META = {
+  [ASSIGNMENT_STATUSES.pending]: { label: "In attesa", final: false },
+  [ASSIGNMENT_STATUSES.accepted]: { label: "Accettata", final: false },
+  [ASSIGNMENT_STATUSES.declined]: { label: "Non accettata", final: false },
+  [ASSIGNMENT_STATUSES.confirmed]: { label: "Confermata", final: true },
+  [ASSIGNMENT_STATUSES.cancelled]: { label: "Cancellata", final: true },
+};
+
+const ADMIN_STATUS_OPTIONS = [
+  ASSIGNMENT_STATUSES.pending,
+  ASSIGNMENT_STATUSES.accepted,
+  ASSIGNMENT_STATUSES.declined,
+  ASSIGNMENT_STATUSES.confirmed,
+  ASSIGNMENT_STATUSES.cancelled,
+];
+
+const ARTIST_RESPONSE_OPTIONS = [
+  ASSIGNMENT_STATUSES.accepted,
+  ASSIGNMENT_STATUSES.declined,
+];
+
 const seedState = {
   users: [
     { id: "admin-1", name: "Admin", role: "admin" },
@@ -21,19 +50,19 @@ const seedState = {
         {
           id: crypto.randomUUID(),
           artistId: "artist-1",
-          status: "accettata",
+          status: ASSIGNMENT_STATUSES.accepted,
           updatedAt: new Date().toISOString(),
         },
         {
           id: crypto.randomUUID(),
           artistId: "artist-2",
-          status: "inviata",
+          status: ASSIGNMENT_STATUSES.pending,
           updatedAt: new Date().toISOString(),
         },
         {
           id: crypto.randomUUID(),
           artistId: "artist-3",
-          status: "confermata",
+          status: ASSIGNMENT_STATUSES.confirmed,
           updatedAt: new Date().toISOString(),
         },
       ],
@@ -50,7 +79,7 @@ const seedState = {
         {
           id: crypto.randomUUID(),
           artistId: "artist-4",
-          status: "inviata",
+          status: ASSIGNMENT_STATUSES.pending,
           updatedAt: new Date().toISOString(),
         },
       ],
@@ -61,6 +90,33 @@ const seedState = {
 
 function cloneSeedState() {
   return JSON.parse(JSON.stringify(seedState));
+}
+
+function normalizeState(rawState) {
+  const fallbackState = cloneSeedState();
+  const users = Array.isArray(rawState?.users) ? rawState.users : fallbackState.users;
+  const events = Array.isArray(rawState?.events)
+    ? rawState.events.map((eventItem) => ({
+        ...eventItem,
+        assignments: Array.isArray(eventItem.assignments)
+          ? eventItem.assignments.map((assignment) => ({
+              ...assignment,
+              status: normalizeAssignmentStatus(assignment.status),
+              updatedAt: assignment.updatedAt || new Date().toISOString(),
+            }))
+          : [],
+      }))
+    : fallbackState.events;
+
+  return { users, events };
+}
+
+function normalizeAssignmentStatus(status) {
+  if (status === "non accettata") {
+    return ASSIGNMENT_STATUSES.declined;
+  }
+
+  return STATUS_META[status] ? status : ASSIGNMENT_STATUSES.pending;
 }
 
 const state = loadState();
@@ -135,7 +191,7 @@ function loadState() {
   }
 
   try {
-    return JSON.parse(saved);
+    return normalizeState(JSON.parse(saved));
   } catch {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seedState));
     return cloneSeedState();
@@ -237,7 +293,7 @@ function handleCreateEvent(event) {
         existingAssignment || {
           id: crypto.randomUUID(),
           artistId: artist.id,
-          status: "inviata",
+          status: ASSIGNMENT_STATUSES.pending,
           updatedAt: new Date().toISOString(),
         }
       );
@@ -253,7 +309,7 @@ function handleCreateEvent(event) {
       assignments: selectedArtists.map((artist) => ({
         id: crypto.randomUUID(),
         artistId: artist.id,
-        status: "inviata",
+        status: ASSIGNMENT_STATUSES.pending,
         updatedAt: new Date().toISOString(),
       })),
       createdAt: new Date().toISOString(),
@@ -439,6 +495,12 @@ function handleStatusChange(event) {
   const assignment = eventItem?.assignments.find((item) => item.id === assignmentId);
 
   if (!eventItem || !assignment) return;
+  const currentUser = getCurrentUser();
+  if (!currentUser) return;
+  if (!canUserSetAssignmentStatus(currentUser, assignment.status, select.value)) {
+    renderApp();
+    return;
+  }
 
   assignment.status = select.value;
   assignment.updatedAt = new Date().toISOString();
@@ -447,7 +509,7 @@ function handleStatusChange(event) {
 }
 
 function handleSummaryControlPointer(event) {
-  if (event.target.closest(".status-pill-select")) {
+  if (event.target.closest(".status-pill-select") || event.target.closest(".meta-pill--status-control")) {
     event.stopPropagation();
   }
 }
@@ -599,7 +661,7 @@ function renderApp() {
     ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
     ${currentUser.role === "admin"
       ? "Gestisci tutti gli stati dal menu operativo."
-      : "Puoi rispondere solo con accettata o cancellata."}
+      : "Puoi rispondere con accettata o non accettata finche la richiesta non viene chiusa."}
   `;
   elements.accountMenuLabel.textContent = currentUser.name;
   elements.accountUserId.value = currentUser.id;
@@ -698,12 +760,16 @@ function getSummary(events) {
   return {
     totalEvents: events.length,
     richiesteAperte: assignments.filter(
-      (item) => item.status !== "confermata" && item.status !== "cancellata",
+      (item) =>
+        item.status !== ASSIGNMENT_STATUSES.confirmed &&
+        item.status !== ASSIGNMENT_STATUSES.cancelled,
     ).length,
-    inviati: assignments.filter((item) => item.status === "inviata").length,
-    accettati: assignments.filter((item) => item.status === "accettata").length,
-    confermati: assignments.filter((item) => item.status === "confermata").length,
-    cancellati: assignments.filter((item) => item.status === "cancellata").length,
+    inviati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.pending).length,
+    accettati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.accepted).length,
+    nonAccettati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.declined)
+      .length,
+    confermati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.confirmed).length,
+    cancellati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.cancelled).length,
   };
 }
 
@@ -878,7 +944,7 @@ function renderArtistEventCard(eventItem, currentUser) {
 function renderAssignment(eventItem, assignment, currentUser) {
   const artist = getArtistById(assignment.artistId);
   const isAdmin = currentUser.role === "admin";
-  const statusLabel = assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1);
+  const statusLabel = getStatusLabel(assignment.status);
   const controls = isAdmin
     ? `
       <select
@@ -887,18 +953,10 @@ function renderAssignment(eventItem, assignment, currentUser) {
         data-event-id="${eventItem.id}"
         data-assignment-id="${assignment.id}"
       >
-        ${["inviata", "accettata", "confermata", "cancellata"]
-          .map(
-            (status) => `
-              <option value="${status}" ${assignment.status === status ? "selected" : ""}>
-                ${capitalize(status)}
-              </option>
-            `,
-          )
-          .join("")}
+        ${renderStatusOptions(ADMIN_STATUS_OPTIONS, assignment.status)}
       </select>
     `
-    : assignment.status !== "confermata"
+    : !isFinalStatus(assignment.status)
       ? `
       <select
         class="status-select status-select--response"
@@ -906,21 +964,16 @@ function renderAssignment(eventItem, assignment, currentUser) {
         data-event-id="${eventItem.id}"
         data-assignment-id="${assignment.id}"
       >
-        <option value="" ${assignment.status === "inviata" ? "selected" : ""} disabled hidden>
-          Rispondi
+        <option value="" ${assignment.status === ASSIGNMENT_STATUSES.pending ? "selected" : ""} disabled hidden>
+          In attesa
         </option>
-        <option value="accettata" ${assignment.status === "accettata" ? "selected" : ""}>
-          Accettata
-        </option>
-        <option value="cancellata" ${assignment.status === "cancellata" ? "selected" : ""}>
-          Cancellata
-        </option>
+        ${renderStatusOptions(ARTIST_RESPONSE_OPTIONS, assignment.status)}
       </select>
-      ${assignment.status === "inviata" ? `
-        <span class="assignment__hint">Scegli se accettare o cancellare.</span>
+      ${assignment.status === ASSIGNMENT_STATUSES.pending ? `
+        <span class="assignment__hint">Scegli se accettare o non accettare.</span>
       ` : ""}
     `
-      : `
+    : `
         <span class="assignment__hint assignment__hint--final">
           Richiesta chiusa definitivamente.
         </span>
@@ -941,11 +994,11 @@ function renderAssignment(eventItem, assignment, currentUser) {
 }
 
 function renderArtistStatusControl(eventItem, assignment) {
-  if (assignment.status === "confermata") {
+  if (isFinalStatus(assignment.status)) {
     return `
       <span class="meta-pill meta-pill--status-control">
         <strong>Stato</strong>
-        <span class="status-badge status--confermata">Confermata</span>
+        <span class="status-badge status--${assignment.status}">${getStatusLabel(assignment.status)}</span>
       </span>
     `;
   }
@@ -959,15 +1012,10 @@ function renderArtistStatusControl(eventItem, assignment) {
         data-event-id="${eventItem.id}"
         data-assignment-id="${assignment.id}"
       >
-        <option value="" ${assignment.status === "inviata" ? "selected" : ""} disabled hidden>
-          In attesa
+        <option value="" ${assignment.status === ASSIGNMENT_STATUSES.pending ? "selected" : ""} disabled hidden>
+          ${getStatusLabel(ASSIGNMENT_STATUSES.pending)}
         </option>
-        <option value="accettata" ${assignment.status === "accettata" ? "selected" : ""}>
-          Accettata
-        </option>
-        <option value="cancellata" ${assignment.status === "cancellata" ? "selected" : ""}>
-          Non accettata
-        </option>
+        ${renderStatusOptions(ARTIST_RESPONSE_OPTIONS, assignment.status)}
       </select>
     </label>
   `;
@@ -983,22 +1031,46 @@ function updateSessionUser(nextUserId) {
   renderApp();
 }
 
+function getCurrentUser() {
+  return state.users.find((user) => user.id === sessionUserId) || null;
+}
+
+function getStatusLabel(status) {
+  return STATUS_META[status]?.label || capitalize(status.replaceAll("_", " "));
+}
+
+function isFinalStatus(status) {
+  return Boolean(STATUS_META[status]?.final);
+}
+
+function canUserSetAssignmentStatus(user, currentStatus, nextStatus) {
+  if (!STATUS_META[nextStatus]) return false;
+
+  if (user.role === "admin") {
+    return true;
+  }
+
+  if (isFinalStatus(currentStatus)) {
+    return false;
+  }
+
+  return ARTIST_RESPONSE_OPTIONS.includes(nextStatus);
+}
+
+function renderStatusOptions(statuses, currentStatus) {
+  return statuses
+    .map(
+      (status) => `
+        <option value="${status}" ${currentStatus === status ? "selected" : ""}>
+          ${getStatusLabel(status)}
+        </option>
+      `,
+    )
+    .join("");
+}
+
 function getArtistById(artistId) {
   return state.users.find((user) => user.id === artistId);
-}
-
-function getStatusCounts(assignments) {
-  return assignments.reduce(
-    (accumulator, assignment) => {
-      accumulator[assignment.status] += 1;
-      return accumulator;
-    },
-    { inviata: 0, accettata: 0, confermata: 0, cancellata: 0 },
-  );
-}
-
-function formatStatusCount(value, singularLabel, pluralLabel) {
-  return `${value} ${value === 1 ? singularLabel : pluralLabel}`;
 }
 
 function renderStatusDots(assignments) {
@@ -1007,8 +1079,8 @@ function renderStatusDots(assignments) {
       (assignment) => `
         <span
           class="status-dot status-dot--${assignment.status}"
-          title="${capitalize(assignment.status)}"
-          aria-label="${capitalize(assignment.status)}"
+          title="${getStatusLabel(assignment.status)}"
+          aria-label="${getStatusLabel(assignment.status)}"
         ></span>
       `,
     )
