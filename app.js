@@ -100,6 +100,9 @@ const elements = {
   eventsList: document.querySelector("#eventsList"),
   resultsCount: document.querySelector("#resultsCount"),
   eventsTitle: document.querySelector("#eventsTitle"),
+  filtersSummary: document.querySelector("#filtersSummary"),
+  dashboardSummary: document.querySelector("#dashboardSummary"),
+  agendaSummary: document.querySelector("#agendaSummary"),
   filterFrom: document.querySelector("#filterFrom"),
   filterTo: document.querySelector("#filterTo"),
   filterText: document.querySelector("#filterText"),
@@ -464,6 +467,10 @@ function renderApp() {
 
   if (!currentUser) {
     elements.sessionInfo.textContent = "";
+    elements.resultsCount.textContent = "";
+    elements.filtersSummary.textContent = "Nessun filtro";
+    elements.dashboardSummary.textContent = "0 eventi analizzati";
+    elements.agendaSummary.textContent = "0 schede";
     return;
   }
 
@@ -480,7 +487,22 @@ function renderApp() {
   elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
   elements.eventsTitle.textContent =
     currentUser.role === "admin" ? "Eventi e richieste" : "Le tue richieste";
-  elements.resultsCount.textContent = `${filteredEvents.length} eventi visibili`;
+  elements.resultsCount.textContent = formatCount(
+    filteredEvents.length,
+    "1 evento visibile",
+    `${filteredEvents.length} eventi visibili`,
+  );
+  elements.filtersSummary.textContent = getFiltersSummary();
+  elements.dashboardSummary.textContent = formatCount(
+    filteredEvents.length,
+    "1 evento analizzato",
+    `${filteredEvents.length} eventi analizzati`,
+  );
+  elements.agendaSummary.textContent = formatCount(
+    filteredEvents.length,
+    "1 scheda",
+    `${filteredEvents.length} schede`,
+  );
 
   renderArtistsAdminList();
   renderDashboard(summary, currentUser.role);
@@ -648,32 +670,54 @@ function renderEvents(events, currentUser) {
   }
 
   elements.eventsList.innerHTML = events
-    .map((eventItem) => {
+    .map((eventItem, index) => {
       const counts = getStatusCounts(eventItem.assignments);
       const assignments = eventItem.assignments
         .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
         .join("");
+      const statusSummary = [
+        `${counts.inviata} inviate`,
+        `${counts.accettata} accettate`,
+        `${counts.confermata} confermate`,
+      ].join(" · ");
+      const notesMarkup = eventItem.notes
+        ? `
+          <div class="event-body-block">
+            <p class="event-body-label">Note organizzative</p>
+            <p class="event-body-copy">${eventItem.notes}</p>
+          </div>
+        `
+        : "";
 
       return `
-        <article class="event-card">
-          <div class="event-card__top">
-            <div>
-              <p class="section-kicker">Evento</p>
-              <h3 class="event-title">${eventItem.clientName}</h3>
+        <details class="event-card" ${index === 0 ? "open" : ""}>
+          <summary class="event-card__summary">
+            <div class="event-card__summary-row">
+              <div>
+                <p class="section-kicker">Evento</p>
+                <h3 class="event-title">${eventItem.clientName}</h3>
+              </div>
+              <div class="event-card__summary-side">
+                <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
+                <span class="event-card__chevron" aria-hidden="true"></span>
+              </div>
             </div>
-            <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
+            <div class="event-card__summary-meta">
+              <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
+              <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
+              <span class="meta-pill"><strong>Stati</strong>${statusSummary}</span>
+            </div>
+          </summary>
+          <div class="event-card__body">
+            ${notesMarkup}
+            <div class="event-body-block">
+              <p class="event-body-label">
+                ${formatCount(eventItem.assignments.length, "1 artista coinvolto", `${eventItem.assignments.length} artisti coinvolti`)}
+              </p>
+              <div class="assignment-list">${assignments}</div>
+            </div>
           </div>
-          <div class="event-meta">
-            <span><strong>Location:</strong> ${eventItem.location}</span>
-            <span><strong>Richiesta:</strong> ${eventItem.requestedActs}</span>
-            <span>
-              <strong>Stato richieste:</strong>
-              ${counts.inviata} inviate · ${counts.accettata} accettate · ${counts.confermata} confermate
-            </span>
-          </div>
-          ${eventItem.notes ? `<p class="event-meta"><strong>Note:</strong> ${eventItem.notes}</p>` : ""}
-          <div class="assignment-list">${assignments}</div>
-        </article>
+        </details>
       `;
     })
     .join("");
@@ -744,10 +788,28 @@ function getStatusCounts(assignments) {
   );
 }
 
+function getFiltersSummary() {
+  const activeFilters = [
+    elements.filterFrom.value,
+    elements.filterTo.value,
+    elements.filterText.value.trim(),
+  ].filter(Boolean).length;
+
+  if (!activeFilters) {
+    return "Nessun filtro";
+  }
+
+  return formatCount(activeFilters, "1 filtro attivo", `${activeFilters} filtri attivi`);
+}
+
 function formatDate(date) {
   return new Intl.DateTimeFormat("it-IT", {
     dateStyle: "long",
   }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatCount(value, singularLabel, pluralLabel) {
+  return value === 1 ? singularLabel : pluralLabel;
 }
 
 function capitalize(value) {
