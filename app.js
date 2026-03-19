@@ -31,6 +31,19 @@ const ARTIST_RESPONSE_OPTIONS = [
   ASSIGNMENT_STATUSES.declined,
 ];
 
+const seedLocations = [
+  {
+    id: crypto.randomUUID(),
+    name: "Villa Aurelia, Roma",
+    mapsUrl: "https://maps.google.com/?q=Villa+Aurelia+Roma",
+  },
+  {
+    id: crypto.randomUUID(),
+    name: "Lago di Garda",
+    mapsUrl: "https://maps.google.com/?q=Lago+di+Garda",
+  },
+];
+
 const seedState = {
   users: [
     { id: "admin-1", name: "Admin", role: "admin" },
@@ -39,14 +52,15 @@ const seedState = {
     { id: "artist-3", name: "Elisa Conti", role: "artist", specialty: "Cantante lirica" },
     { id: "artist-4", name: "Matteo Valli", role: "artist", specialty: "Pianista" },
   ],
+  locations: seedLocations,
   events: [
     {
       id: crypto.randomUUID(),
-      clientName: "Wedding Martini",
+      title: "Wedding Martini",
       date: "2026-06-06",
-      location: "Villa Aurelia, Roma",
-      requestedActs: "String duo + cantante lirica",
-      notes: "Cerimonia ore 17:30, repertorio classico e ingresso sposi.",
+      locationId: seedLocations[0].id,
+      locationName: seedLocations[0].name,
+      info: "Cerimonia ore 17:30, repertorio classico e ingresso sposi.",
       assignments: [
         {
           id: crypto.randomUUID(),
@@ -71,11 +85,11 @@ const seedState = {
     },
     {
       id: crypto.randomUUID(),
-      clientName: "Ricevimento Villa Blu",
+      title: "Ricevimento Villa Blu",
       date: "2026-07-12",
-      location: "Lago di Garda",
-      requestedActs: "Pianoforte solo aperitivo",
-      notes: "Setup entro le 18:00, service gia incluso.",
+      locationId: seedLocations[1].id,
+      locationName: seedLocations[1].name,
+      info: "Setup entro le 18:00, service gia incluso.",
       assignments: [
         {
           id: crypto.randomUUID(),
@@ -96,20 +110,14 @@ function cloneSeedState() {
 function normalizeState(rawState) {
   const fallbackState = cloneSeedState();
   const users = Array.isArray(rawState?.users) ? rawState.users : fallbackState.users;
+  const locations = Array.isArray(rawState?.locations)
+    ? rawState.locations.map((location) => normalizeLocation(location))
+    : fallbackState.locations;
   const events = Array.isArray(rawState?.events)
-    ? rawState.events.map((eventItem) => ({
-        ...eventItem,
-        assignments: Array.isArray(eventItem.assignments)
-          ? eventItem.assignments.map((assignment) => ({
-              ...assignment,
-              status: normalizeAssignmentStatus(assignment.status),
-              updatedAt: assignment.updatedAt || new Date().toISOString(),
-            }))
-          : [],
-      }))
+    ? rawState.events.map((eventItem) => normalizeEvent(eventItem, locations))
     : fallbackState.events;
 
-  return { users, events };
+  return { users, locations, events };
 }
 
 function normalizeAssignmentStatus(status) {
@@ -118,6 +126,41 @@ function normalizeAssignmentStatus(status) {
   }
 
   return STATUS_META[status] ? status : ASSIGNMENT_STATUSES.pending;
+}
+
+function normalizeLocation(location) {
+  return {
+    id: location.id || crypto.randomUUID(),
+    name: String(location.name || "").trim(),
+    mapsUrl: String(location.mapsUrl || "").trim(),
+  };
+}
+
+function normalizeEvent(eventItem, locations) {
+  const locationName = String(
+    eventItem.locationName || eventItem.location || "",
+  ).trim();
+  const matchedLocation = getLocationByName(locations, locationName);
+  const infoParts = [eventItem.info, eventItem.requestedActs, eventItem.notes]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  return {
+    id: eventItem.id || crypto.randomUUID(),
+    title: String(eventItem.title || eventItem.clientName || "").trim(),
+    date: String(eventItem.date || ""),
+    locationId: String(eventItem.locationId || matchedLocation?.id || ""),
+    locationName: matchedLocation?.name || locationName,
+    info: infoParts.join(infoParts.length > 1 ? " · " : ""),
+    assignments: Array.isArray(eventItem.assignments)
+      ? eventItem.assignments.map((assignment) => ({
+          ...assignment,
+          status: normalizeAssignmentStatus(assignment.status),
+          updatedAt: assignment.updatedAt || new Date().toISOString(),
+        }))
+      : [],
+    createdAt: eventItem.createdAt || new Date().toISOString(),
+  };
 }
 
 const state = loadState();
@@ -150,9 +193,11 @@ const elements = {
   quickActionsMenu: document.querySelector("#quickActionsMenu"),
   openEventModal: document.querySelector("#openEventModal"),
   openArtistModal: document.querySelector("#openArtistModal"),
+  openLocationModal: document.querySelector("#openLocationModal"),
   modalOverlay: document.querySelector("#modalOverlay"),
   eventModal: document.querySelector("#eventModal"),
   artistModal: document.querySelector("#artistModal"),
+  locationModal: document.querySelector("#locationModal"),
   artistForm: document.querySelector("#artistForm"),
   artistId: document.querySelector("#artistId"),
   artistName: document.querySelector("#artistName"),
@@ -162,6 +207,15 @@ const elements = {
   artistFeedback: document.querySelector("#artistFeedback"),
   cancelArtistEdit: document.querySelector("#cancelArtistEdit"),
   artistsAdminList: document.querySelector("#artistsAdminList"),
+  locationForm: document.querySelector("#locationForm"),
+  locationId: document.querySelector("#locationId"),
+  locationName: document.querySelector("#locationName"),
+  locationMapsUrl: document.querySelector("#locationMapsUrl"),
+  locationFormTitle: document.querySelector("#locationFormTitle"),
+  locationSubmitButton: document.querySelector("#locationSubmitButton"),
+  locationFeedback: document.querySelector("#locationFeedback"),
+  cancelLocationEdit: document.querySelector("#cancelLocationEdit"),
+  locationsAdminList: document.querySelector("#locationsAdminList"),
   eventForm: document.querySelector("#eventForm"),
   eventId: document.querySelector("#eventId"),
   eventModalTitle: document.querySelector("#eventModalTitle"),
@@ -182,6 +236,7 @@ const elements = {
   calendarView: document.querySelector("#calendarView"),
   filterText: document.querySelector("#filterText"),
   resetFilters: document.querySelector("#resetFilters"),
+  savedLocationsList: document.querySelector("#savedLocationsList"),
   statCardTemplate: document.querySelector("#statCardTemplate"),
 };
 
@@ -189,6 +244,7 @@ bootstrap();
 
 function bootstrap() {
   populateLoginUsers();
+  renderLocationOptions();
   renderArtistOptions();
   bindEvents();
   renderApp();
@@ -223,12 +279,22 @@ function bindEvents() {
     resetEventForm();
     openModal("event");
   });
-  elements.openArtistModal.addEventListener("click", () => openModal("artist"));
+  elements.openArtistModal.addEventListener("click", () => {
+    resetArtistForm();
+    openModal("artist");
+  });
+  elements.openLocationModal.addEventListener("click", () => {
+    resetLocationForm();
+    openModal("location");
+  });
   elements.modalOverlay.addEventListener("click", handleModalOverlayClick);
   elements.artistForm.addEventListener("submit", handleArtistSubmit);
+  elements.locationForm.addEventListener("submit", handleLocationSubmit);
   elements.cancelArtistEdit.addEventListener("click", resetArtistForm);
+  elements.cancelLocationEdit.addEventListener("click", resetLocationForm);
   elements.cancelEventEdit.addEventListener("click", resetEventForm);
   elements.artistsAdminList.addEventListener("click", handleArtistAdminClick);
+  elements.locationsAdminList.addEventListener("click", handleLocationAdminClick);
   elements.addEventArtist.addEventListener("click", handleAddEventArtist);
   elements.eventForm.addEventListener("submit", handleCreateEvent);
   elements.selectedEventArtists.addEventListener("click", handleSelectedEventArtistsClick);
@@ -270,17 +336,19 @@ function handleCreateEvent(event) {
   event.preventDefault();
   const formData = new FormData(elements.eventForm);
   const eventId = String(formData.get("eventId") || "").trim();
-  const clientName = String(formData.get("clientName")).trim();
+  const title = String(formData.get("eventName")).trim();
   const eventDate = String(formData.get("eventDate"));
-  const location = String(formData.get("location")).trim();
-  const requestedActs = String(formData.get("requestedActs")).trim();
-  const notes = String(formData.get("eventNotes")).trim();
+  const locationInput = String(formData.get("location")).trim();
+  const info = String(formData.get("eventInfo")).trim();
   const selectedArtists = state.users
     .filter((user) => user.role === "artist")
     .filter((artist) => eventArtistSelection.includes(artist.id));
+  const matchedLocation = getLocationByName(state.locations, locationInput);
+  const locationId = matchedLocation?.id || "";
+  const locationName = matchedLocation?.name || locationInput;
 
-  if (!clientName || !eventDate || !location || !requestedActs) {
-    alert("Compila cliente, data, location e richiesta musicale.");
+  if (!title || !eventDate || !locationName) {
+    alert("Compila evento, data e location.");
     return;
   }
 
@@ -293,11 +361,11 @@ function handleCreateEvent(event) {
     const eventItem = state.events.find((item) => item.id === eventId);
     if (!eventItem) return;
 
-    eventItem.clientName = clientName;
+    eventItem.title = title;
     eventItem.date = eventDate;
-    eventItem.location = location;
-    eventItem.requestedActs = requestedActs;
-    eventItem.notes = notes;
+    eventItem.locationId = locationId;
+    eventItem.locationName = locationName;
+    eventItem.info = info;
 
     const existingAssignments = new Map(
       eventItem.assignments.map((assignment) => [assignment.artistId, assignment]),
@@ -317,11 +385,11 @@ function handleCreateEvent(event) {
   } else {
     state.events.unshift({
       id: crypto.randomUUID(),
-      clientName,
+      title,
       date: eventDate,
-      location,
-      requestedActs,
-      notes,
+      locationId,
+      locationName,
+      info,
       assignments: selectedArtists.map((artist) => ({
         id: crypto.randomUUID(),
         artistId: artist.id,
@@ -377,6 +445,54 @@ function handleArtistSubmit(event) {
   renderApp();
 }
 
+function handleLocationSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.locationForm);
+  const locationId = String(formData.get("locationId") || "").trim();
+  const name = String(formData.get("locationName") || "").trim();
+  const mapsUrl = String(formData.get("locationMapsUrl") || "").trim();
+  const isEditing = Boolean(locationId);
+  const duplicateLocation = state.locations.find(
+    (location) =>
+      location.name.toLowerCase() === name.toLowerCase() && location.id !== locationId,
+  );
+
+  if (!name) {
+    alert("Inserisci il nome della location.");
+    return;
+  }
+
+  if (duplicateLocation) {
+    alert("Questa location e gia presente.");
+    return;
+  }
+
+  if (locationId) {
+    const location = getLocationById(locationId);
+    if (!location) return;
+    const previousName = location.name;
+    location.name = name;
+    location.mapsUrl = mapsUrl;
+    syncEventsWithLocationRename(location.id, previousName, name);
+  } else {
+    state.locations.push({
+      id: crypto.randomUUID(),
+      name,
+      mapsUrl,
+    });
+  }
+
+  saveState();
+  renderLocationOptions();
+  elements.locationFeedback.textContent = isEditing
+    ? `${name} aggiornata.`
+    : `${name} salvata nelle location.`;
+  elements.locationFeedback.classList.remove("hidden");
+  resetLocationForm();
+  closeModal();
+  renderApp();
+}
+
 function handleArtistAdminClick(event) {
   const button = event.target.closest("[data-edit-artist]");
   if (!button) return;
@@ -392,6 +508,23 @@ function handleArtistAdminClick(event) {
   elements.cancelArtistEdit.classList.remove("hidden");
   openModal("artist");
   elements.artistName.focus();
+}
+
+function handleLocationAdminClick(event) {
+  const button = event.target.closest("[data-edit-location]");
+  if (!button) return;
+
+  const location = getLocationById(button.dataset.locationId);
+  if (!location) return;
+
+  elements.locationId.value = location.id;
+  elements.locationName.value = location.name;
+  elements.locationMapsUrl.value = location.mapsUrl || "";
+  elements.locationFormTitle.textContent = "Modifica location";
+  elements.locationSubmitButton.textContent = "Salva modifica";
+  elements.cancelLocationEdit.classList.remove("hidden");
+  openModal("location");
+  elements.locationName.focus();
 }
 
 function toggleQuickActionsMenu() {
@@ -443,6 +576,7 @@ function openModal(type) {
   elements.modalOverlay.classList.remove("hidden");
   elements.eventModal.classList.toggle("hidden", type !== "event");
   elements.artistModal.classList.toggle("hidden", type !== "artist");
+  elements.locationModal.classList.toggle("hidden", type !== "location");
 
   if (type === "event") {
     elements.eventModal.querySelector("input, textarea, select")?.focus();
@@ -451,6 +585,10 @@ function openModal(type) {
   if (type === "artist") {
     elements.artistName.focus();
   }
+
+  if (type === "location") {
+    elements.locationName.focus();
+  }
 }
 
 function closeModal() {
@@ -458,6 +596,7 @@ function closeModal() {
   elements.modalOverlay.classList.add("hidden");
   elements.eventModal.classList.add("hidden");
   elements.artistModal.classList.add("hidden");
+  elements.locationModal.classList.add("hidden");
   elements.quickActionsMenu.classList.add("hidden");
   elements.quickActionsToggle?.setAttribute("aria-expanded", "false");
 }
@@ -585,6 +724,15 @@ function resetArtistForm() {
   elements.artistFeedback.classList.add("hidden");
 }
 
+function resetLocationForm() {
+  elements.locationForm.reset();
+  elements.locationId.value = "";
+  elements.locationFormTitle.textContent = "Nuova location";
+  elements.locationSubmitButton.textContent = "Salva location";
+  elements.cancelLocationEdit.classList.add("hidden");
+  elements.locationFeedback.classList.add("hidden");
+}
+
 function resetEventForm() {
   elements.eventForm.reset();
   elements.eventId.value = "";
@@ -601,11 +749,10 @@ function startEventEdit(eventItem) {
   elements.eventModalTitle.textContent = "Modifica evento";
   elements.eventSubmitButton.textContent = "Salva modifiche";
   elements.cancelEventEdit.classList.remove("hidden");
-  elements.eventForm.elements.clientName.value = eventItem.clientName;
+  elements.eventForm.elements.eventName.value = eventItem.title;
   elements.eventForm.elements.eventDate.value = eventItem.date;
-  elements.eventForm.elements.location.value = eventItem.location;
-  elements.eventForm.elements.requestedActs.value = eventItem.requestedActs;
-  elements.eventForm.elements.eventNotes.value = eventItem.notes || "";
+  elements.eventForm.elements.location.value = eventItem.locationName;
+  elements.eventForm.elements.eventInfo.value = eventItem.info || "";
   eventArtistSelection = eventItem.assignments.map((assignment) => assignment.artistId);
   renderArtistOptions();
   openModal("event");
@@ -685,6 +832,14 @@ function renderArtistOptions() {
     .join("");
 }
 
+function renderLocationOptions() {
+  elements.savedLocationsList.innerHTML = state.locations
+    .slice()
+    .sort((first, second) => first.name.localeCompare(second.name, "it"))
+    .map((location) => `<option value="${location.name}"></option>`)
+    .join("");
+}
+
 function renderApp() {
   const currentUser = state.users.find((user) => user.id === sessionUserId) || null;
 
@@ -728,6 +883,7 @@ function renderApp() {
   );
 
   renderArtistsAdminList();
+  renderLocationsAdminList();
   renderDashboard(summary, currentUser.role);
   renderAgenda(filteredEvents, currentUser);
 }
@@ -764,6 +920,42 @@ function renderArtistsAdminList() {
     .join("");
 }
 
+function renderLocationsAdminList() {
+  if (!state.locations.length) {
+    elements.locationsAdminList.innerHTML = `
+      <p class="empty-state">Nessuna location salvata.</p>
+    `;
+    return;
+  }
+
+  elements.locationsAdminList.innerHTML = state.locations
+    .slice()
+    .sort((first, second) => first.name.localeCompare(second.name, "it"))
+    .map(
+      (location) => `
+        <div class="artist-option artist-option--admin">
+          <div>
+            <strong>${location.name}</strong>
+            <span class="artist-role">
+              ${location.mapsUrl
+                ? `<a href="${location.mapsUrl}" target="_blank" rel="noreferrer">Apri Google Maps</a>`
+                : "Nessun link Maps"}
+            </span>
+          </div>
+          <button
+            class="button button--ghost"
+            type="button"
+            data-edit-location="true"
+            data-location-id="${location.id}"
+          >
+            Modifica
+          </button>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function getVisibleEvents(currentUser) {
   const sortedEvents = [...state.events].sort((first, second) =>
     first.date.localeCompare(second.date),
@@ -788,10 +980,10 @@ function filterEvents(events) {
 
   return events.filter((eventItem) => {
     const haystack = [
-      eventItem.clientName,
-      eventItem.location,
-      eventItem.requestedActs,
-      eventItem.notes,
+      eventItem.title,
+      eventItem.locationName,
+      getEventLocation(eventItem)?.mapsUrl || "",
+      eventItem.info,
       ...eventItem.assignments.map((assignment) => getArtistById(assignment.artistId)?.name || ""),
       ...eventItem.assignments.map(
         (assignment) => getArtistById(assignment.artistId)?.specialty || "",
@@ -953,11 +1145,11 @@ function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
     .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
     .join("");
   const statusDotsMarkup = renderStatusDots(eventItem.assignments);
-  const notesMarkup = eventItem.notes
+  const infoMarkup = eventItem.info
     ? `
       <div class="event-body-block">
-        <p class="event-body-label">Note organizzative</p>
-        <p class="event-body-copy">${eventItem.notes}</p>
+        <p class="event-body-label">Informazioni</p>
+        <p class="event-body-copy">${eventItem.info}</p>
       </div>
     `
     : "";
@@ -968,7 +1160,7 @@ function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
         <div class="event-card__summary-row">
           <div>
             <p class="section-kicker">Evento</p>
-            <h3 class="event-title">${eventItem.clientName}</h3>
+            <h3 class="event-title">${eventItem.title}</h3>
           </div>
           <div class="event-card__summary-side event-card__summary-side--admin">
             <div class="event-status-dots" aria-label="Stato richieste">
@@ -996,10 +1188,9 @@ function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
           </button>
         </div>
         <div class="event-card__summary-meta">
-          <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
-          <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
+          ${renderLocationMeta(eventItem)}
         </div>
-        ${notesMarkup}
+        ${infoMarkup}
         <div class="assignment-list">${assignments}</div>
       </div>
     </details>
@@ -1010,11 +1201,11 @@ function renderArtistEventCard(eventItem, currentUser, forceOpen = false) {
   const assignment = eventItem.assignments[0];
   const statusDotsMarkup = renderStatusDots(eventItem.assignments);
   const artistStatusControl = renderArtistStatusControl(eventItem, assignment);
-  const notesMarkup = eventItem.notes
+  const infoMarkup = eventItem.info
     ? `
       <div class="event-body-block">
-        <p class="event-body-label">Dettagli utili</p>
-        <p class="event-body-copy">${eventItem.notes}</p>
+        <p class="event-body-label">Informazioni</p>
+        <p class="event-body-copy">${eventItem.info}</p>
       </div>
     `
     : "";
@@ -1025,7 +1216,7 @@ function renderArtistEventCard(eventItem, currentUser, forceOpen = false) {
         <div class="event-card__summary-row">
           <div>
             <p class="section-kicker">La tua data</p>
-            <h3 class="event-title">${eventItem.clientName}</h3>
+            <h3 class="event-title">${eventItem.title}</h3>
           </div>
           <div class="event-card__summary-side event-card__summary-side--artist">
             <div class="event-status-dots" aria-label="Stato richieste">
@@ -1038,11 +1229,10 @@ function renderArtistEventCard(eventItem, currentUser, forceOpen = false) {
       </summary>
       <div class="event-card__body">
         <div class="event-card__summary-meta">
-          <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
-          <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
+          ${renderLocationMeta(eventItem)}
           ${artistStatusControl}
         </div>
-        ${notesMarkup}
+        ${infoMarkup}
       </div>
     </details>
   `;
@@ -1188,6 +1378,58 @@ function getArtistById(artistId) {
   return state.users.find((user) => user.id === artistId);
 }
 
+function getLocationById(locationId) {
+  return state.locations.find((location) => location.id === locationId) || null;
+}
+
+function getLocationByName(locations, locationName) {
+  const normalizedName = String(locationName || "").trim().toLowerCase();
+  if (!normalizedName) return null;
+
+  return (
+    locations.find((location) => location.name.trim().toLowerCase() === normalizedName) || null
+  );
+}
+
+function getEventLocation(eventItem) {
+  return (
+    getLocationById(eventItem.locationId) ||
+    getLocationByName(state.locations, eventItem.locationName)
+  );
+}
+
+function renderLocationMeta(eventItem) {
+  const location = getEventLocation(eventItem);
+  const locationLabel = location?.name || eventItem.locationName;
+
+  if (!locationLabel) {
+    return "";
+  }
+
+  return `
+    <span class="meta-pill">
+      <strong>Location</strong>
+      ${
+        location?.mapsUrl
+          ? `<a class="location-link" href="${location.mapsUrl}" target="_blank" rel="noreferrer">${locationLabel}</a>`
+          : locationLabel
+      }
+    </span>
+  `;
+}
+
+function syncEventsWithLocationRename(locationId, previousName, nextName) {
+  state.events.forEach((eventItem) => {
+    if (
+      eventItem.locationId === locationId ||
+      eventItem.locationName.trim().toLowerCase() === previousName.trim().toLowerCase()
+    ) {
+      eventItem.locationId = locationId;
+      eventItem.locationName = nextName;
+    }
+  });
+}
+
 function ensureCalendarMonthCursor(events) {
   if (calendarMonthCursor) return;
 
@@ -1234,7 +1476,7 @@ function renderCalendarMonth(events, monthCursor) {
                   type="button"
                   data-calendar-event-id="${eventItem.id}"
                 >
-                  <span class="calendar-event__name">${eventItem.clientName}</span>
+                  <span class="calendar-event__name">${eventItem.title}</span>
                   <span class="event-status-dots" aria-label="Stato richieste">
                     ${renderStatusDots(eventItem.assignments)}
                   </span>

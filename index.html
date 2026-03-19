@@ -58,7 +58,8 @@
                 <input
                   id="filterText"
                   type="search"
-                  placeholder="Cliente, location, artista o tipo di formazione"
+                  list="savedLocationsList"
+                  placeholder="Evento, location o artista"
                 />
               </label>
               <button id="resetFilters" class="button button--ghost" type="button">Reset</button>
@@ -96,6 +97,9 @@
                 </button>
                 <button id="openArtistModal" class="quick-actions__item" type="button">
                   Nuovo artista
+                </button>
+                <button id="openLocationModal" class="quick-actions__item" type="button">
+                  Nuova location
                 </button>
               </div>
             </div>
@@ -234,12 +238,12 @@
           <form id="eventForm" class="form-grid">
             <input id="eventId" name="eventId" type="hidden" />
             <label class="field">
-              <span>Cliente</span>
+              <span>Evento</span>
               <input
-                id="clientName"
-                name="clientName"
+                id="eventName"
+                name="eventName"
                 type="text"
-                placeholder="Es. Villa Bianchi Wedding"
+                placeholder="Es. Wedding Martini"
                 required
               />
             </label>
@@ -253,27 +257,18 @@
                 id="location"
                 name="location"
                 type="text"
+                list="savedLocationsList"
                 placeholder="Es. Lago di Como"
                 required
               />
             </label>
-            <label class="field">
-              <span>Richiesta musicale</span>
-              <input
-                id="requestedActs"
-                name="requestedActs"
-                type="text"
-                placeholder="Es. String duo + cantante lirico"
-                required
-              />
-            </label>
             <label class="field field--full">
-              <span>Note organizzative</span>
+              <span>Informazioni</span>
               <textarea
-                id="eventNotes"
-                name="eventNotes"
+                id="eventInfo"
+                name="eventInfo"
                 rows="3"
-                placeholder="Orario cerimonia, richieste speciali, logistica..."
+                placeholder="Orari, repertorio, logistica, dettagli utili..."
               ></textarea>
             </label>
             <fieldset class="field field--full">
@@ -295,7 +290,70 @@
           </form>
         </article>
       </div>
+
+      <div id="locationModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="locationFormTitle">
+        <article class="card">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Admin</p>
+              <h2 id="locationFormTitle">Nuova location</h2>
+            </div>
+            <div class="modal-actions">
+              <button
+                id="cancelLocationEdit"
+                class="button button--ghost hidden"
+                type="button"
+              >
+                Annulla modifica
+              </button>
+              <button class="button button--ghost" type="button" data-close-modal="true">
+                Chiudi
+              </button>
+            </div>
+          </div>
+          <form id="locationForm" class="form-grid">
+            <input id="locationId" name="locationId" type="hidden" />
+            <label class="field">
+              <span>Nome location</span>
+              <input
+                id="locationName"
+                name="locationName"
+                type="text"
+                placeholder="Es. Villa Aurelia, Roma"
+                required
+              />
+            </label>
+            <label class="field">
+              <span>Link Google Maps</span>
+              <input
+                id="locationMapsUrl"
+                name="locationMapsUrl"
+                type="url"
+                placeholder="https://maps.google.com/..."
+              />
+            </label>
+            <button id="locationSubmitButton" class="button" type="submit">
+              Salva location
+            </button>
+          </form>
+          <div id="locationFeedback" class="admin-feedback hidden"></div>
+          <details class="inline-disclosure admin-subsection">
+            <summary class="inline-disclosure__summary">
+              <div>
+                <p class="section-kicker">Location</p>
+                <h3>Archivio salvato</h3>
+              </div>
+              <span class="fold-card__chevron" aria-hidden="true"></span>
+            </summary>
+            <div class="inline-disclosure__body">
+              <div id="locationsAdminList" class="artist-admin-list"></div>
+            </div>
+          </details>
+        </article>
+      </div>
     </div>
+
+    <datalist id="savedLocationsList"></datalist>
 
     <template id="statCardTemplate">
       <article class="stat-card">

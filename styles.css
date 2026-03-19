@@ -742,6 +742,17 @@ h2 {
   font-size: 0.85rem;
 }
 
+.artist-role a,
+.location-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.artist-role a:hover,
+.location-link:hover {
+  text-decoration: underline;
+}
+
 .events-list {
   display: grid;
   gap: 12px;
