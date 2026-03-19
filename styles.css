@@ -103,7 +103,7 @@ h2 {
 .hero-copy,
 .session-info,
 .empty-state,
-.stat-card__hint {
+.assignment__hint {
   color: var(--muted);
 }
 
@@ -135,9 +135,9 @@ h2 {
   isolation: isolate;
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 14px;
   align-items: center;
-  padding-block: 16px;
+  padding-block: 12px;
 }
 
 .topbar-actions {
@@ -162,6 +162,14 @@ h2 {
 
 .search-bar .field--search {
   min-width: min(360px, 52vw);
+}
+
+.search-bar .field {
+  gap: 0;
+}
+
+.search-bar .field span {
+  display: none;
 }
 
 .utility-button {
@@ -311,8 +319,8 @@ h2 {
 
 .utility-panel {
   display: grid;
-  gap: 16px;
-  padding: 18px 20px 20px;
+  gap: 12px;
+  padding: 14px 16px 16px;
 }
 
 .utility-panel__head {
@@ -482,8 +490,8 @@ h2 {
 
 .stat-card {
   display: grid;
-  gap: 4px;
-  padding: 12px 14px;
+  gap: 2px;
+  padding: 10px 12px;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.58);
@@ -505,11 +513,6 @@ h2 {
   line-height: 1;
   margin: 0;
   font-family: "Manrope", sans-serif;
-}
-
-.stat-card__hint {
-  font-size: 0.78rem;
-  line-height: 1.3;
 }
 
 .admin-subsection {
@@ -615,9 +618,9 @@ h2 {
 
 .event-card__summary {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
-  padding: 18px 20px;
+  padding: 14px 16px;
 }
 
 .event-card__summary-row {
@@ -705,7 +708,7 @@ h2 {
 }
 
 .event-card__body {
-  padding: 0 20px 20px;
+  padding: 0 16px 16px;
   border-top: 1px solid var(--line);
 }
 
@@ -745,13 +748,13 @@ h2 {
 }
 
 .event-card--artist .event-card__body {
-  padding-top: 16px;
+  padding-top: 12px;
 }
 
 .artist-response-card {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 8px;
+  padding: 12px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(94, 67, 51, 0.08);
@@ -945,6 +948,11 @@ h2 {
     justify-content: space-between;
   }
 
+  .event-card__summary-side--artist {
+    flex-direction: row;
+    align-items: center;
+  }
+
   .account-menu__panel {
     position: static;
     width: 100%;
@@ -953,19 +961,18 @@ h2 {
 
 @media (max-width: 680px) {
   .page-shell {
-    padding-inline: 14px;
+    padding: 18px 12px 36px;
   }
 
   .card {
-    padding: 18px;
-    border-radius: 22px;
+    padding: 14px;
+    border-radius: 18px;
   }
 
   .event-card {
-    border-radius: 22px;
+    border-radius: 18px;
   }
 
-  .app-topbar,
   .assignment,
   .artist-option--admin,
   .selected-artist,
@@ -978,33 +985,101 @@ h2 {
     justify-content: flex-start;
   }
 
-  .topbar-actions,
   .modal-actions,
   .fold-card__aside,
-  .event-card__summary-side,
-  .utility-search,
   .search-bar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .fab-button {
+  .app-topbar,
+  .topbar-actions,
+  .utility-search {
+    gap: 10px;
+  }
+
+  .topbar-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .account-menu {
+    flex: 1 1 auto;
+  }
+
+  .account-menu__toggle {
     width: 100%;
-    border-radius: 999px;
+    justify-content: space-between;
+    min-height: 42px;
+    padding-inline: 12px;
+  }
+
+  .quick-actions {
+    flex: 0 0 auto;
+  }
+
+  .fab-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
   }
 
   .event-card__summary,
   .event-card__body,
   .inline-disclosure__summary,
   .inline-disclosure__body {
-    padding-inline: 16px;
+    padding-inline: 14px;
   }
 
   .event-body-top {
     justify-content: space-between;
   }
 
+  .event-card__summary-row {
+    gap: 10px;
+  }
+
+  .event-card--artist .event-card__summary-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .event-card__summary-side,
+  .event-card__summary-side--artist {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .event-card--artist .event-card__summary-side {
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+
+  .event-card--artist .event-title {
+    font-size: 1.2rem;
+  }
+
+  .event-status-dots {
+    gap: 5px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+  }
+
   .meta-pill {
+    padding: 8px 10px;
+    border-radius: 12px;
+  }
+
+  .status-select,
+  .status-select--response {
+    min-width: 0;
     width: 100%;
   }
 }

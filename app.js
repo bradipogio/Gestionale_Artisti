@@ -581,7 +581,7 @@ function renderApp() {
     elements.accountMenuLabel.textContent = "Profilo";
     closeSearchBar();
     elements.sessionInfo.textContent = "";
-    elements.dashboardSummary.textContent = "0 eventi analizzati";
+    elements.dashboardSummary.textContent = "0";
     elements.agendaSummary.textContent = "0 schede";
     return;
   }
@@ -601,11 +601,7 @@ function renderApp() {
   const summary = getSummary(filteredEvents);
 
   elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
-  elements.dashboardSummary.textContent = formatCount(
-    filteredEvents.length,
-    "1 evento analizzato",
-    `${filteredEvents.length} eventi analizzati`,
-  );
+  elements.dashboardSummary.textContent = String(filteredEvents.length);
   elements.agendaSummary.textContent = formatCount(
     filteredEvents.length,
     "1 scheda",
@@ -710,44 +706,36 @@ function renderDashboard(summary, role) {
           {
             label: "Eventi",
             value: summary.totalEvents,
-            hint: "date visibili",
           },
           {
             label: "Aperte",
             value: summary.richiesteAperte,
-            hint: "richieste attive",
           },
           {
             label: "In attesa",
             value: summary.inviati,
-            hint: "senza risposta",
           },
           {
             label: "Confermate",
             value: summary.confermati,
-            hint: "chiuse",
           },
           {
             label: "Cancellate",
             value: summary.cancellati,
-            hint: "annullate",
           },
         ]
       : [
           {
             label: "In attesa di risposta",
             value: summary.inviati,
-            hint: "in attesa",
           },
           {
             label: "Confermate",
             value: summary.confermati,
-            hint: "chiuse",
           },
           {
             label: "Tutte le richieste",
             value: summary.totalEvents,
-            hint: "eventi tuoi",
           },
         ];
 
@@ -756,7 +744,6 @@ function renderDashboard(summary, role) {
     const fragment = elements.statCardTemplate.content.cloneNode(true);
     fragment.querySelector(".stat-card__label").textContent = item.label;
     fragment.querySelector(".stat-card__value").textContent = item.value;
-    fragment.querySelector(".stat-card__hint").textContent = item.hint;
     elements.dashboardSection.appendChild(fragment);
   });
 }
@@ -892,10 +879,7 @@ function renderArtistEventCard(eventItem, currentUser) {
           <span class="meta-pill meta-pill--status"><strong>Il tuo stato</strong><span class="status-badge status--${assignment.status}">${statusLabel}</span></span>
         </div>
         ${notesMarkup}
-        <div class="event-body-block">
-          <p class="event-body-label">La tua risposta</p>
-          ${renderArtistResponse(eventItem, assignment)}
-        </div>
+        ${renderArtistResponse(eventItem, assignment)}
       </div>
     </details>
   `;
@@ -970,9 +954,7 @@ function renderArtistResponse(eventItem, assignment) {
   if (assignment.status === "confermata") {
     return `
       <div class="artist-response-card artist-response-card--final">
-        <span class="assignment__hint assignment__hint--final">
-          Richiesta confermata definitivamente.
-        </span>
+        <span class="status-badge status--confermata">Confermata</span>
       </div>
     `;
   }
@@ -995,11 +977,6 @@ function renderArtistResponse(eventItem, assignment) {
           Cancellata
         </option>
       </select>
-      <span class="assignment__hint">
-        ${assignment.status === "inviata"
-          ? "Scegli se accettare o cancellare."
-          : `Stato attuale: ${capitalize(assignment.status)}.`}
-      </span>
     </div>
   `;
 }
