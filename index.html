@@ -23,22 +23,33 @@
             chi ha risposto o e ancora in attesa.
           </p>
         </div>
-        <div class="login-panel card">
-          <div class="login-panel__head">
-            <span class="pill">Accesso demo</span>
-            <button id="logoutButton" class="button button--ghost hidden" type="button">
-              Esci
-            </button>
+        <details id="accountPanel" class="login-panel fold-card card" open>
+          <summary class="fold-card__summary">
+            <div>
+              <p class="section-kicker">Accesso</p>
+              <h2 id="accountSummaryTitle">Accesso demo</h2>
+            </div>
+            <div class="fold-card__aside">
+              <span id="accountSummaryMeta" class="pill">Seleziona utente</span>
+              <span class="fold-card__chevron" aria-hidden="true"></span>
+            </div>
+          </summary>
+          <div class="fold-card__body">
+            <form id="loginForm" class="stack">
+              <label class="field">
+                <span>Utente</span>
+                <select id="loginUserId"></select>
+              </label>
+              <button id="loginButton" class="button" type="submit">Entra nella webapp</button>
+            </form>
+            <div class="login-panel__footer">
+              <div id="sessionInfo" class="session-info hidden"></div>
+              <button id="logoutButton" class="button button--ghost hidden" type="button">
+                Esci
+              </button>
+            </div>
           </div>
-          <form id="loginForm" class="stack">
-            <label class="field">
-              <span>Utente</span>
-              <select id="loginUserId"></select>
-            </label>
-            <button id="loginButton" class="button" type="submit">Entra nella webapp</button>
-          </form>
-          <div id="sessionInfo" class="session-info hidden"></div>
-        </div>
+        </details>
       </header>
 
       <main id="app" class="app hidden">

@@ -70,6 +70,9 @@ let activeModal = "";
 
 const elements = {
   app: document.querySelector("#app"),
+  accountPanel: document.querySelector("#accountPanel"),
+  accountSummaryTitle: document.querySelector("#accountSummaryTitle"),
+  accountSummaryMeta: document.querySelector("#accountSummaryMeta"),
   loginForm: document.querySelector("#loginForm"),
   loginUserId: document.querySelector("#loginUserId"),
   loginButton: document.querySelector("#loginButton"),
@@ -466,6 +469,9 @@ function renderApp() {
   elements.loginButton.textContent = currentUser ? "Cambia utente" : "Entra nella webapp";
 
   if (!currentUser) {
+    elements.accountSummaryTitle.textContent = "Accesso demo";
+    elements.accountSummaryMeta.textContent = "Seleziona utente";
+    elements.accountPanel.open = true;
     elements.sessionInfo.textContent = "";
     elements.resultsCount.textContent = "";
     elements.filtersSummary.textContent = "Nessun filtro";
@@ -479,6 +485,10 @@ function renderApp() {
     ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
     Usa il menu Utente per cambiare accesso.
   `;
+  elements.accountSummaryTitle.textContent = currentUser.name;
+  elements.accountSummaryMeta.textContent =
+    currentUser.role === "admin" ? "Vista amministratore" : currentUser.specialty;
+  elements.accountPanel.open = false;
 
   const visibleEvents = getVisibleEvents(currentUser);
   const filteredEvents = filterEvents(visibleEvents);
