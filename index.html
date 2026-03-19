@@ -39,50 +39,31 @@
 
       <main id="app" class="app hidden">
         <section class="app-topbar card">
-          <div class="utility-buttons" aria-label="Controlli interfaccia">
+          <div class="utility-search" aria-label="Ricerca rapida">
             <button
-              id="toggleFiltersPanel"
+              id="toggleSearchBar"
               class="utility-button"
               type="button"
-              aria-controls="filtersPanel"
+              aria-controls="searchBar"
               aria-pressed="false"
-              title="Filtri"
+              title="Ricerca"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="6"></circle>
                 <path d="M20 20l-4.2-4.2"></path>
               </svg>
             </button>
-            <button
-              id="toggleDashboardPanel"
-              class="utility-button"
-              type="button"
-              aria-controls="dashboardPanel"
-              aria-pressed="false"
-              title="Quadro operativo"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4" y="4" width="6" height="6" rx="1"></rect>
-                <rect x="14" y="4" width="6" height="10" rx="1"></rect>
-                <rect x="4" y="14" width="6" height="6" rx="1"></rect>
-                <rect x="14" y="16" width="6" height="4" rx="1"></rect>
-              </svg>
-            </button>
-            <button
-              id="toggleAgendaPanel"
-              class="utility-button utility-button--active"
-              type="button"
-              aria-controls="agendaPanel"
-              aria-pressed="true"
-              title="Agenda"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4" y="6" width="16" height="14" rx="2"></rect>
-                <path d="M8 4v4"></path>
-                <path d="M16 4v4"></path>
-                <path d="M4 10h16"></path>
-              </svg>
-            </button>
+            <div id="searchBar" class="search-bar hidden">
+              <label class="field field--search">
+                <span>Ricerca testo</span>
+                <input
+                  id="filterText"
+                  type="search"
+                  placeholder="Cliente, location, artista o tipo di formazione"
+                />
+              </label>
+              <button id="resetFilters" class="button button--ghost" type="button">Reset</button>
+            </div>
           </div>
           <div class="topbar-actions">
             <details id="accountMenu" class="account-menu">
@@ -123,32 +104,7 @@
         </section>
 
         <div class="panel-stack">
-          <section id="filtersPanel" class="utility-panel card hidden">
-            <div class="utility-panel__head">
-              <span class="pill" id="filtersSummary">Nessun filtro</span>
-              <button id="resetFilters" class="button button--ghost" type="button">Reset</button>
-            </div>
-            <div class="toolbar__filters">
-              <label class="field">
-                <span>Dal</span>
-                <input id="filterFrom" type="date" />
-              </label>
-              <label class="field">
-                <span>Al</span>
-                <input id="filterTo" type="date" />
-              </label>
-              <label class="field field--search">
-                <span>Ricerca testo</span>
-                <input
-                  id="filterText"
-                  type="search"
-                  placeholder="Cliente, location, artista o tipo di formazione"
-                />
-              </label>
-            </div>
-          </section>
-
-          <section id="dashboardPanel" class="utility-panel card hidden">
+          <section id="dashboardPanel" class="utility-panel card">
             <div class="utility-panel__head">
               <span class="pill" id="dashboardSummary">0 eventi analizzati</span>
             </div>

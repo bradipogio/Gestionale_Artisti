@@ -148,10 +148,20 @@ h2 {
   gap: 12px;
 }
 
-.utility-buttons {
+.utility-search {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.search-bar .field--search {
+  min-width: min(360px, 52vw);
 }
 
 .utility-button {
@@ -633,6 +643,40 @@ h2 {
   flex-wrap: wrap;
 }
 
+.event-status-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.event-status-dots--body {
+  margin: 14px 0 2px;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: inset 0 0 0 1px rgba(47, 36, 30, 0.1);
+}
+
+.status-dot--inviata {
+  background: #f7d6a0;
+}
+
+.status-dot--accettata {
+  background: #f6e6a8;
+}
+
+.status-dot--confermata {
+  background: #d9ebdf;
+}
+
+.status-dot--cancellata {
+  background: #f4c7c3;
+}
+
 .meta-pill {
   display: grid;
   gap: 4px;
@@ -851,7 +895,7 @@ h2 {
     align-items: stretch;
   }
 
-  .utility-buttons,
+  .utility-search,
   .topbar-actions {
     justify-content: space-between;
   }
@@ -905,7 +949,8 @@ h2 {
   .modal-actions,
   .fold-card__aside,
   .event-card__summary-side,
-  .utility-buttons {
+  .utility-search,
+  .search-bar {
     flex-direction: column;
     align-items: stretch;
   }

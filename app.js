@@ -80,10 +80,8 @@ const elements = {
   accountMenuLabel: document.querySelector("#accountMenuLabel"),
   logoutButton: document.querySelector("#logoutButton"),
   sessionInfo: document.querySelector("#sessionInfo"),
-  toggleFiltersPanel: document.querySelector("#toggleFiltersPanel"),
-  toggleDashboardPanel: document.querySelector("#toggleDashboardPanel"),
-  toggleAgendaPanel: document.querySelector("#toggleAgendaPanel"),
-  filtersPanel: document.querySelector("#filtersPanel"),
+  toggleSearchBar: document.querySelector("#toggleSearchBar"),
+  searchBar: document.querySelector("#searchBar"),
   dashboardPanel: document.querySelector("#dashboardPanel"),
   agendaPanel: document.querySelector("#agendaPanel"),
   dashboardSection: document.querySelector("#dashboardSection"),
@@ -113,11 +111,8 @@ const elements = {
   addEventArtist: document.querySelector("#addEventArtist"),
   selectedEventArtists: document.querySelector("#selectedEventArtists"),
   eventsList: document.querySelector("#eventsList"),
-  filtersSummary: document.querySelector("#filtersSummary"),
   dashboardSummary: document.querySelector("#dashboardSummary"),
   agendaSummary: document.querySelector("#agendaSummary"),
-  filterFrom: document.querySelector("#filterFrom"),
-  filterTo: document.querySelector("#filterTo"),
   filterText: document.querySelector("#filterText"),
   resetFilters: document.querySelector("#resetFilters"),
   statCardTemplate: document.querySelector("#statCardTemplate"),
@@ -155,15 +150,7 @@ function bindEvents() {
   elements.loginForm.addEventListener("submit", handleSessionSubmit);
   elements.accountForm.addEventListener("submit", handleSessionSubmit);
   elements.logoutButton.addEventListener("click", handleLogout);
-  elements.toggleFiltersPanel.addEventListener("click", () =>
-    togglePanel(elements.filtersPanel, elements.toggleFiltersPanel),
-  );
-  elements.toggleDashboardPanel.addEventListener("click", () =>
-    togglePanel(elements.dashboardPanel, elements.toggleDashboardPanel),
-  );
-  elements.toggleAgendaPanel.addEventListener("click", () =>
-    togglePanel(elements.agendaPanel, elements.toggleAgendaPanel),
-  );
+  elements.toggleSearchBar.addEventListener("click", toggleSearchBar);
   elements.quickActionsToggle.addEventListener("click", toggleQuickActionsMenu);
   elements.openEventModal.addEventListener("click", () => {
     resetEventForm();
@@ -182,8 +169,6 @@ function bindEvents() {
   elements.eventsList.addEventListener("change", handleStatusChange);
   elements.eventsList.addEventListener("toggle", handleEventCardToggle, true);
   elements.resetFilters.addEventListener("click", resetFilters);
-  elements.filterFrom.addEventListener("input", renderApp);
-  elements.filterTo.addEventListener("input", renderApp);
   elements.filterText.addEventListener("input", renderApp);
   document.addEventListener("click", handleDocumentClick);
 }
@@ -202,6 +187,7 @@ function handleLogout() {
   localStorage.removeItem(SESSION_KEY);
   populateLoginUsers();
   elements.accountMenu.open = false;
+  closeSearchBar();
   closeModal();
   renderApp();
 }
@@ -341,6 +327,23 @@ function toggleQuickActionsMenu() {
   elements.quickActionsToggle.setAttribute("aria-expanded", String(!isOpen));
 }
 
+function toggleSearchBar() {
+  const isHidden = elements.searchBar.classList.contains("hidden");
+  elements.searchBar.classList.toggle("hidden", !isHidden);
+  elements.toggleSearchBar.classList.toggle("utility-button--active", isHidden);
+  elements.toggleSearchBar.setAttribute("aria-pressed", String(isHidden));
+
+  if (isHidden) {
+    elements.filterText.focus();
+  }
+}
+
+function closeSearchBar() {
+  elements.searchBar.classList.add("hidden");
+  elements.toggleSearchBar.classList.remove("utility-button--active");
+  elements.toggleSearchBar.setAttribute("aria-pressed", "false");
+}
+
 function handleDocumentClick(event) {
   if (
     !event.target.closest("#quickActions") &&
@@ -352,6 +355,10 @@ function handleDocumentClick(event) {
 
   if (!event.target.closest("#accountMenu")) {
     elements.accountMenu.open = false;
+  }
+
+  if (!event.target.closest(".utility-search")) {
+    closeSearchBar();
   }
 }
 
@@ -417,23 +424,6 @@ function handleEventsClick(event) {
     startEventEdit(eventItem);
     return;
   }
-
-  const action = event.target.closest("[data-action]");
-  if (!action) return;
-
-  const eventId = action.dataset.eventId;
-  const assignmentId = action.dataset.assignmentId;
-  const eventItem = state.events.find((item) => item.id === eventId);
-  const assignment = eventItem?.assignments.find((item) => item.id === assignmentId);
-
-  if (!eventItem || !assignment) return;
-
-  if (action.dataset.action === "artist-accept") {
-    assignment.status = "accettata";
-    assignment.updatedAt = new Date().toISOString();
-    saveState();
-    renderApp();
-  }
 }
 
 function handleStatusChange(event) {
@@ -466,8 +456,6 @@ function handleEventCardToggle(event) {
 }
 
 function resetFilters() {
-  elements.filterFrom.value = "";
-  elements.filterTo.value = "";
   elements.filterText.value = "";
   renderApp();
 }
@@ -591,13 +579,10 @@ function renderApp() {
   if (!currentUser) {
     elements.accountMenu.open = false;
     elements.accountMenuLabel.textContent = "Profilo";
+    closeSearchBar();
     elements.sessionInfo.textContent = "";
-    elements.filtersSummary.textContent = "Nessun filtro";
     elements.dashboardSummary.textContent = "0 eventi analizzati";
     elements.agendaSummary.textContent = "0 schede";
-    setPanelState(elements.filtersPanel, elements.toggleFiltersPanel, false);
-    setPanelState(elements.dashboardPanel, elements.toggleDashboardPanel, false);
-    setPanelState(elements.agendaPanel, elements.toggleAgendaPanel, true);
     return;
   }
 
@@ -616,7 +601,6 @@ function renderApp() {
   const summary = getSummary(filteredEvents);
 
   elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
-  elements.filtersSummary.textContent = getFiltersSummary();
   elements.dashboardSummary.textContent = formatCount(
     filteredEvents.length,
     "1 evento analizzato",
@@ -685,13 +669,9 @@ function getVisibleEvents(currentUser) {
 }
 
 function filterEvents(events) {
-  const from = elements.filterFrom.value;
-  const to = elements.filterTo.value;
   const text = elements.filterText.value.trim().toLowerCase();
 
   return events.filter((eventItem) => {
-    const matchesFrom = !from || eventItem.date >= from;
-    const matchesTo = !to || eventItem.date <= to;
     const haystack = [
       eventItem.clientName,
       eventItem.location,
@@ -705,7 +685,7 @@ function filterEvents(events) {
       .join(" ")
       .toLowerCase();
     const matchesText = !text || haystack.includes(text);
-    return matchesFrom && matchesTo && matchesText;
+    return matchesText;
   });
 }
 
@@ -795,7 +775,7 @@ function renderEvents(events, currentUser) {
   if (!events.length) {
     elements.eventsList.innerHTML = `
       <p class="empty-state">
-        Nessun evento trovato con i filtri correnti.
+        Nessun evento trovato con la ricerca corrente.
       </p>
     `;
     return;
@@ -813,6 +793,7 @@ function renderEvents(events, currentUser) {
         formatStatusCount(counts.confermata, "confermata", "confermate"),
         formatStatusCount(counts.cancellata, "cancellata", "cancellate"),
       ].join(" · ");
+      const statusDotsMarkup = renderStatusDots(eventItem.assignments);
       const notesMarkup = eventItem.notes
         ? `
           <div class="event-body-block">
@@ -861,9 +842,15 @@ function renderEvents(events, currentUser) {
               <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
               <span class="meta-pill"><strong>Stati</strong>${statusSummary}</span>
             </div>
+            <div class="event-status-dots" aria-label="Stato richieste">
+              ${statusDotsMarkup}
+            </div>
           </summary>
           <div class="event-card__body">
             ${editButtonMarkup}
+            <div class="event-status-dots event-status-dots--body" aria-label="Stato richieste">
+              ${statusDotsMarkup}
+            </div>
             ${notesMarkup}
             <div class="event-body-block">
               <p class="event-body-label">
@@ -948,19 +935,9 @@ function updateSessionUser(nextUserId) {
   localStorage.setItem(SESSION_KEY, sessionUserId);
   populateLoginUsers();
   elements.accountMenu.open = false;
+  closeSearchBar();
   closeModal();
   renderApp();
-}
-
-function togglePanel(panel, button) {
-  const isHidden = panel.classList.contains("hidden");
-  setPanelState(panel, button, isHidden);
-}
-
-function setPanelState(panel, button, isOpen) {
-  panel.classList.toggle("hidden", !isOpen);
-  button.classList.toggle("utility-button--active", isOpen);
-  button.setAttribute("aria-pressed", String(isOpen));
 }
 
 function getArtistById(artistId) {
@@ -981,18 +958,18 @@ function formatStatusCount(value, singularLabel, pluralLabel) {
   return `${value} ${value === 1 ? singularLabel : pluralLabel}`;
 }
 
-function getFiltersSummary() {
-  const activeFilters = [
-    elements.filterFrom.value,
-    elements.filterTo.value,
-    elements.filterText.value.trim(),
-  ].filter(Boolean).length;
-
-  if (!activeFilters) {
-    return "Nessun filtro";
-  }
-
-  return formatCount(activeFilters, "1 filtro attivo", `${activeFilters} filtri attivi`);
+function renderStatusDots(assignments) {
+  return assignments
+    .map(
+      (assignment) => `
+        <span
+          class="status-dot status-dot--${assignment.status}"
+          title="${capitalize(assignment.status)}"
+          aria-label="${capitalize(assignment.status)}"
+        ></span>
+      `,
+    )
+    .join("");
 }
 
 function formatDate(date) {
