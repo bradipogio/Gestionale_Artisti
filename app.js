@@ -74,6 +74,14 @@ const elements = {
   sessionInfo: document.querySelector("#sessionInfo"),
   dashboardSection: document.querySelector("#dashboardSection"),
   adminSection: document.querySelector("#adminSection"),
+  artistForm: document.querySelector("#artistForm"),
+  artistId: document.querySelector("#artistId"),
+  artistName: document.querySelector("#artistName"),
+  artistSpecialty: document.querySelector("#artistSpecialty"),
+  artistFormTitle: document.querySelector("#artistFormTitle"),
+  artistSubmitButton: document.querySelector("#artistSubmitButton"),
+  cancelArtistEdit: document.querySelector("#cancelArtistEdit"),
+  artistsAdminList: document.querySelector("#artistsAdminList"),
   eventForm: document.querySelector("#eventForm"),
   artistCheckboxes: document.querySelector("#artistCheckboxes"),
   eventsList: document.querySelector("#eventsList"),
@@ -117,6 +125,9 @@ function saveState() {
 function bindEvents() {
   elements.loginForm.addEventListener("submit", handleLogin);
   elements.logoutButton.addEventListener("click", handleLogout);
+  elements.artistForm.addEventListener("submit", handleArtistSubmit);
+  elements.cancelArtistEdit.addEventListener("click", resetArtistForm);
+  elements.artistsAdminList.addEventListener("click", handleArtistAdminClick);
   elements.eventForm.addEventListener("submit", handleCreateEvent);
   elements.eventsList.addEventListener("click", handleEventsClick);
   elements.eventsList.addEventListener("change", handleStatusChange);
@@ -182,6 +193,55 @@ function handleCreateEvent(event) {
   renderApp();
 }
 
+function handleArtistSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(elements.artistForm);
+  const artistId = String(formData.get("artistId") || "").trim();
+  const name = String(formData.get("artistName") || "").trim();
+  const specialty = String(formData.get("artistSpecialty") || "").trim();
+
+  if (!name || !specialty) {
+    alert("Compila nome e specialita dell'artista.");
+    return;
+  }
+
+  if (artistId) {
+    const artist = getArtistById(artistId);
+    if (!artist) return;
+    artist.name = name;
+    artist.specialty = specialty;
+  } else {
+    state.users.push({
+      id: crypto.randomUUID(),
+      name,
+      role: "artist",
+      specialty,
+    });
+  }
+
+  saveState();
+  populateLoginUsers();
+  renderArtistOptions();
+  resetArtistForm();
+  renderApp();
+}
+
+function handleArtistAdminClick(event) {
+  const button = event.target.closest("[data-edit-artist]");
+  if (!button) return;
+
+  const artist = getArtistById(button.dataset.artistId);
+  if (!artist || artist.role !== "artist") return;
+
+  elements.artistId.value = artist.id;
+  elements.artistName.value = artist.name;
+  elements.artistSpecialty.value = artist.specialty || "";
+  elements.artistFormTitle.textContent = "Modifica artista";
+  elements.artistSubmitButton.textContent = "Salva modifica";
+  elements.cancelArtistEdit.classList.remove("hidden");
+  elements.artistName.focus();
+}
+
 function handleEventsClick(event) {
   const action = event.target.closest("[data-action]");
   if (!action) return;
@@ -223,6 +283,14 @@ function resetFilters() {
   elements.filterTo.value = "";
   elements.filterText.value = "";
   renderApp();
+}
+
+function resetArtistForm() {
+  elements.artistForm.reset();
+  elements.artistId.value = "";
+  elements.artistFormTitle.textContent = "Nuovo artista";
+  elements.artistSubmitButton.textContent = "Aggiungi artista";
+  elements.cancelArtistEdit.classList.add("hidden");
 }
 
 function populateLoginUsers() {
@@ -289,8 +357,41 @@ function renderApp() {
     currentUser.role === "admin" ? "Eventi e richieste" : "Le tue richieste";
   elements.resultsCount.textContent = `${filteredEvents.length} eventi visibili`;
 
+  renderArtistsAdminList();
   renderDashboard(summary, currentUser.role);
   renderEvents(filteredEvents, currentUser);
+}
+
+function renderArtistsAdminList() {
+  const artists = state.users.filter((user) => user.role === "artist");
+
+  if (!artists.length) {
+    elements.artistsAdminList.innerHTML = `
+      <p class="empty-state">Nessun artista registrato.</p>
+    `;
+    return;
+  }
+
+  elements.artistsAdminList.innerHTML = artists
+    .map(
+      (artist) => `
+        <div class="artist-option artist-option--admin">
+          <div>
+            <strong>${artist.name}</strong>
+            <span class="artist-role">${artist.specialty}</span>
+          </div>
+          <button
+            class="button button--ghost"
+            type="button"
+            data-edit-artist="true"
+            data-artist-id="${artist.id}"
+          >
+            Modifica
+          </button>
+        </div>
+      `,
+    )
+    .join("");
 }
 
 function getVisibleEvents(currentUser) {
