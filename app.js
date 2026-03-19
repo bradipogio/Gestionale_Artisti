@@ -70,6 +70,7 @@ const elements = {
   app: document.querySelector("#app"),
   loginForm: document.querySelector("#loginForm"),
   loginUserId: document.querySelector("#loginUserId"),
+  loginButton: document.querySelector("#loginButton"),
   logoutButton: document.querySelector("#logoutButton"),
   sessionInfo: document.querySelector("#sessionInfo"),
   dashboardSection: document.querySelector("#dashboardSection"),
@@ -80,6 +81,7 @@ const elements = {
   artistSpecialty: document.querySelector("#artistSpecialty"),
   artistFormTitle: document.querySelector("#artistFormTitle"),
   artistSubmitButton: document.querySelector("#artistSubmitButton"),
+  artistFeedback: document.querySelector("#artistFeedback"),
   cancelArtistEdit: document.querySelector("#cancelArtistEdit"),
   artistsAdminList: document.querySelector("#artistsAdminList"),
   eventForm: document.querySelector("#eventForm"),
@@ -199,6 +201,7 @@ function handleArtistSubmit(event) {
   const artistId = String(formData.get("artistId") || "").trim();
   const name = String(formData.get("artistName") || "").trim();
   const specialty = String(formData.get("artistSpecialty") || "").trim();
+  const isEditing = Boolean(artistId);
 
   if (!name || !specialty) {
     alert("Compila nome e specialita dell'artista.");
@@ -222,6 +225,10 @@ function handleArtistSubmit(event) {
   saveState();
   populateLoginUsers();
   renderArtistOptions();
+  elements.artistFeedback.textContent = isEditing
+    ? `${name} aggiornato. Lo trovi nel roster e nel menu Utente.`
+    : `${name} aggiunto. Lo trovi nel roster, nel menu Utente e in "Artisti da contattare".`;
+  elements.artistFeedback.classList.remove("hidden");
   resetArtistForm();
   renderApp();
 }
@@ -336,7 +343,7 @@ function renderApp() {
   elements.app.classList.toggle("hidden", !currentUser);
   elements.logoutButton.classList.toggle("hidden", !currentUser);
   elements.sessionInfo.classList.toggle("hidden", !currentUser);
-  elements.loginForm.classList.toggle("hidden", Boolean(currentUser));
+  elements.loginButton.textContent = currentUser ? "Cambia utente" : "Entra nella webapp";
 
   if (!currentUser) {
     elements.sessionInfo.textContent = "";
@@ -345,7 +352,8 @@ function renderApp() {
 
   elements.sessionInfo.innerHTML = `
     <strong>${currentUser.name}</strong><br />
-    ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}
+    ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
+    Usa il menu Utente per cambiare accesso.
   `;
 
   const visibleEvents = getVisibleEvents(currentUser);
