@@ -101,7 +101,6 @@ h2 {
 }
 
 .hero-copy,
-.session-info,
 .empty-state,
 .assignment__hint {
   color: var(--muted);

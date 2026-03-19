@@ -167,7 +167,7 @@ const state = loadState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
 let activeModal = "";
-let openEventIds = new Set();
+let openEventId = "";
 let agendaViewMode = localStorage.getItem(AGENDA_VIEW_KEY) === "calendar" ? "calendar" : "list";
 let calendarMonthCursor = null;
 let selectedCalendarEventId = "";
@@ -182,7 +182,6 @@ const elements = {
   accountMenu: document.querySelector("#accountMenu"),
   accountMenuLabel: document.querySelector("#accountMenuLabel"),
   logoutButton: document.querySelector("#logoutButton"),
-  sessionInfo: document.querySelector("#sessionInfo"),
   toggleSearchBar: document.querySelector("#toggleSearchBar"),
   searchBar: document.querySelector("#searchBar"),
   dashboardPanel: document.querySelector("#dashboardPanel"),
@@ -225,8 +224,6 @@ const elements = {
   addEventArtist: document.querySelector("#addEventArtist"),
   selectedEventArtists: document.querySelector("#selectedEventArtists"),
   eventsList: document.querySelector("#eventsList"),
-  dashboardSummary: document.querySelector("#dashboardSummary"),
-  agendaSummary: document.querySelector("#agendaSummary"),
   agendaListViewButton: document.querySelector("#agendaListViewButton"),
   agendaCalendarViewButton: document.querySelector("#agendaCalendarViewButton"),
   calendarToolbar: document.querySelector("#calendarToolbar"),
@@ -644,7 +641,7 @@ function handleCalendarClick(event) {
   if (!eventButton) return;
 
   selectedCalendarEventId = eventButton.dataset.calendarEventId;
-  openEventIds.add(selectedCalendarEventId);
+  openEventId = selectedCalendarEventId;
   renderApp();
 }
 
@@ -683,9 +680,16 @@ function handleEventCardToggle(event) {
   if (!card) return;
 
   if (card.open) {
-    openEventIds.add(card.dataset.eventId);
+    openEventId = card.dataset.eventId;
+    document.querySelectorAll(".event-card[open]").forEach((openCard) => {
+      if (openCard !== card) {
+        openCard.removeAttribute("open");
+      }
+    });
   } else {
-    openEventIds.delete(card.dataset.eventId);
+    if (openEventId === card.dataset.eventId) {
+      openEventId = "";
+    }
   }
 }
 
@@ -851,22 +855,12 @@ function renderApp() {
     elements.accountMenu.open = false;
     elements.accountMenuLabel.textContent = "Profilo";
     closeSearchBar();
-    elements.sessionInfo.textContent = "";
-    elements.dashboardSummary.textContent = "0";
-    elements.agendaSummary.textContent = "0 schede";
     elements.calendarToolbar.classList.add("hidden");
     elements.calendarView.classList.add("hidden");
     elements.calendarView.innerHTML = "";
     return;
   }
 
-  elements.sessionInfo.innerHTML = `
-    <strong>${currentUser.name}</strong><br />
-    ${currentUser.role === "admin" ? "Vista completa amministratore" : currentUser.specialty}<br />
-    ${currentUser.role === "admin"
-      ? "Gestisci tutti gli stati dal menu operativo."
-      : "Puoi rispondere con accettata o non accettata finche la richiesta non viene chiusa."}
-  `;
   elements.accountMenuLabel.textContent = currentUser.name;
   elements.accountUserId.value = currentUser.id;
 
@@ -875,12 +869,6 @@ function renderApp() {
   const summary = getSummary(filteredEvents);
 
   elements.quickActions.classList.toggle("hidden", currentUser.role !== "admin");
-  elements.dashboardSummary.textContent = String(filteredEvents.length);
-  elements.agendaSummary.textContent = formatCount(
-    filteredEvents.length,
-    "1 scheda",
-    `${filteredEvents.length} schede`,
-  );
 
   renderArtistsAdminList();
   renderLocationsAdminList();
@@ -1155,7 +1143,7 @@ function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
     : "";
 
   return `
-    <details class="event-card" data-event-id="${eventItem.id}" ${forceOpen || openEventIds.has(eventItem.id) ? "open" : ""}>
+    <details class="event-card" data-event-id="${eventItem.id}" ${forceOpen || openEventId === eventItem.id ? "open" : ""}>
       <summary class="event-card__summary">
         <div class="event-card__summary-row">
           <div>
@@ -1211,11 +1199,10 @@ function renderArtistEventCard(eventItem, currentUser, forceOpen = false) {
     : "";
 
   return `
-    <details class="event-card event-card--artist" data-event-id="${eventItem.id}" ${forceOpen || openEventIds.has(eventItem.id) ? "open" : ""}>
+    <details class="event-card event-card--artist" data-event-id="${eventItem.id}" ${forceOpen || openEventId === eventItem.id ? "open" : ""}>
       <summary class="event-card__summary">
         <div class="event-card__summary-row">
           <div>
-            <p class="section-kicker">La tua data</p>
             <h3 class="event-title">${eventItem.title}</h3>
           </div>
           <div class="event-card__summary-side event-card__summary-side--artist">
