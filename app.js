@@ -1,5 +1,6 @@
 const STORAGE_KEY = "gestionale-artisti-state-v1";
 const SESSION_KEY = "gestionale-artisti-session-v1";
+const AGENDA_VIEW_KEY = "gestionale-artisti-agenda-view-v1";
 
 const ASSIGNMENT_STATUSES = {
   pending: "inviata",
@@ -124,6 +125,9 @@ let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
 let activeModal = "";
 let openEventIds = new Set();
+let agendaViewMode = localStorage.getItem(AGENDA_VIEW_KEY) === "calendar" ? "calendar" : "list";
+let calendarMonthCursor = null;
+let selectedCalendarEventId = "";
 
 const elements = {
   app: document.querySelector("#app"),
@@ -169,6 +173,13 @@ const elements = {
   eventsList: document.querySelector("#eventsList"),
   dashboardSummary: document.querySelector("#dashboardSummary"),
   agendaSummary: document.querySelector("#agendaSummary"),
+  agendaListViewButton: document.querySelector("#agendaListViewButton"),
+  agendaCalendarViewButton: document.querySelector("#agendaCalendarViewButton"),
+  calendarToolbar: document.querySelector("#calendarToolbar"),
+  calendarPrevButton: document.querySelector("#calendarPrevButton"),
+  calendarNextButton: document.querySelector("#calendarNextButton"),
+  calendarLabel: document.querySelector("#calendarLabel"),
+  calendarView: document.querySelector("#calendarView"),
   filterText: document.querySelector("#filterText"),
   resetFilters: document.querySelector("#resetFilters"),
   statCardTemplate: document.querySelector("#statCardTemplate"),
@@ -226,6 +237,11 @@ function bindEvents() {
   elements.eventsList.addEventListener("click", handleEventsClick);
   elements.eventsList.addEventListener("change", handleStatusChange);
   elements.eventsList.addEventListener("toggle", handleEventCardToggle, true);
+  elements.agendaListViewButton.addEventListener("click", () => setAgendaViewMode("list"));
+  elements.agendaCalendarViewButton.addEventListener("click", () => setAgendaViewMode("calendar"));
+  elements.calendarPrevButton.addEventListener("click", () => shiftCalendarMonth(-1));
+  elements.calendarNextButton.addEventListener("click", () => shiftCalendarMonth(1));
+  elements.calendarView.addEventListener("click", handleCalendarClick);
   elements.resetFilters.addEventListener("click", resetFilters);
   elements.filterText.addEventListener("input", renderApp);
   document.addEventListener("click", handleDocumentClick);
@@ -484,6 +500,15 @@ function handleEventsClick(event) {
   }
 }
 
+function handleCalendarClick(event) {
+  const eventButton = event.target.closest("[data-calendar-event-id]");
+  if (!eventButton) return;
+
+  selectedCalendarEventId = eventButton.dataset.calendarEventId;
+  openEventIds.add(selectedCalendarEventId);
+  renderApp();
+}
+
 function handleStatusChange(event) {
   const select = event.target.closest("[data-assignment-status]");
   if (!select) return;
@@ -527,6 +552,27 @@ function handleEventCardToggle(event) {
 
 function resetFilters() {
   elements.filterText.value = "";
+  renderApp();
+}
+
+function setAgendaViewMode(nextMode) {
+  if (agendaViewMode === nextMode) return;
+
+  agendaViewMode = nextMode;
+  localStorage.setItem(AGENDA_VIEW_KEY, agendaViewMode);
+
+  if (agendaViewMode === "calendar") {
+    const currentUser = getCurrentUser();
+    const visibleEvents = currentUser ? filterEvents(getVisibleEvents(currentUser)) : [];
+    ensureCalendarMonthCursor(visibleEvents);
+  }
+
+  renderApp();
+}
+
+function shiftCalendarMonth(offset) {
+  calendarMonthCursor = createShiftedMonthCursor(calendarMonthCursor, offset);
+  selectedCalendarEventId = "";
   renderApp();
 }
 
@@ -653,6 +699,9 @@ function renderApp() {
     elements.sessionInfo.textContent = "";
     elements.dashboardSummary.textContent = "0";
     elements.agendaSummary.textContent = "0 schede";
+    elements.calendarToolbar.classList.add("hidden");
+    elements.calendarView.classList.add("hidden");
+    elements.calendarView.innerHTML = "";
     return;
   }
 
@@ -680,7 +729,7 @@ function renderApp() {
 
   renderArtistsAdminList();
   renderDashboard(summary, currentUser.role);
-  renderEvents(filteredEvents, currentUser);
+  renderAgenda(filteredEvents, currentUser);
 }
 
 function renderArtistsAdminList() {
@@ -822,8 +871,14 @@ function renderDashboard(summary, role) {
   });
 }
 
-function renderEvents(events, currentUser) {
+function renderAgenda(events, currentUser) {
+  syncAgendaViewControls();
+
   if (!events.length) {
+    elements.calendarToolbar.classList.add("hidden");
+    elements.calendarView.classList.add("hidden");
+    elements.calendarView.innerHTML = "";
+    elements.eventsList.classList.remove("hidden");
     elements.eventsList.innerHTML = `
       <p class="empty-state">
         Nessun evento trovato con la ricerca corrente.
@@ -832,6 +887,19 @@ function renderEvents(events, currentUser) {
     return;
   }
 
+  if (agendaViewMode === "calendar") {
+    renderCalendarAgenda(events, currentUser);
+    return;
+  }
+
+  elements.calendarToolbar.classList.add("hidden");
+  elements.calendarView.classList.add("hidden");
+  elements.calendarView.innerHTML = "";
+  elements.eventsList.classList.remove("hidden");
+  renderEvents(events, currentUser);
+}
+
+function renderEvents(events, currentUser) {
   elements.eventsList.innerHTML = events
     .map((eventItem) =>
       currentUser.role === "admin"
@@ -841,7 +909,46 @@ function renderEvents(events, currentUser) {
     .join("");
 }
 
-function renderAdminEventCard(eventItem, currentUser) {
+function renderCalendarAgenda(events, currentUser) {
+  ensureCalendarMonthCursor(events);
+  const monthEvents = getMonthEvents(events, calendarMonthCursor);
+
+  if (!monthEvents.some((eventItem) => eventItem.id === selectedCalendarEventId)) {
+    selectedCalendarEventId = monthEvents[0]?.id || "";
+  }
+
+  elements.calendarToolbar.classList.remove("hidden");
+  elements.calendarView.classList.remove("hidden");
+  elements.eventsList.classList.remove("hidden");
+  elements.calendarLabel.textContent = formatCalendarMonth(calendarMonthCursor);
+  elements.calendarView.innerHTML = renderCalendarMonth(events, calendarMonthCursor);
+
+  if (!selectedCalendarEventId) {
+    elements.eventsList.innerHTML = `
+      <p class="empty-state">
+        Nessun evento in ${formatCalendarMonth(calendarMonthCursor).toLowerCase()}.
+      </p>
+    `;
+    return;
+  }
+
+  const selectedEvent = monthEvents.find((eventItem) => eventItem.id === selectedCalendarEventId);
+  if (!selectedEvent) {
+    elements.eventsList.innerHTML = `
+      <p class="empty-state">
+        Nessun dettaglio disponibile per il mese selezionato.
+      </p>
+    `;
+    return;
+  }
+
+  elements.eventsList.innerHTML =
+    currentUser.role === "admin"
+      ? renderAdminEventCard(selectedEvent, currentUser, true)
+      : renderArtistEventCard(selectedEvent, currentUser, true);
+}
+
+function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
   const assignments = eventItem.assignments
     .map((assignment) => renderAssignment(eventItem, assignment, currentUser))
     .join("");
@@ -856,7 +963,7 @@ function renderAdminEventCard(eventItem, currentUser) {
     : "";
 
   return `
-    <details class="event-card" data-event-id="${eventItem.id}" ${openEventIds.has(eventItem.id) ? "open" : ""}>
+    <details class="event-card" data-event-id="${eventItem.id}" ${forceOpen || openEventIds.has(eventItem.id) ? "open" : ""}>
       <summary class="event-card__summary">
         <div class="event-card__summary-row">
           <div>
@@ -899,7 +1006,7 @@ function renderAdminEventCard(eventItem, currentUser) {
   `;
 }
 
-function renderArtistEventCard(eventItem, currentUser) {
+function renderArtistEventCard(eventItem, currentUser, forceOpen = false) {
   const assignment = eventItem.assignments[0];
   const statusDotsMarkup = renderStatusDots(eventItem.assignments);
   const artistStatusControl = renderArtistStatusControl(eventItem, assignment);
@@ -913,7 +1020,7 @@ function renderArtistEventCard(eventItem, currentUser) {
     : "";
 
   return `
-    <details class="event-card event-card--artist" data-event-id="${eventItem.id}" ${openEventIds.has(eventItem.id) ? "open" : ""}>
+    <details class="event-card event-card--artist" data-event-id="${eventItem.id}" ${forceOpen || openEventIds.has(eventItem.id) ? "open" : ""}>
       <summary class="event-card__summary">
         <div class="event-card__summary-row">
           <div>
@@ -1035,6 +1142,14 @@ function getCurrentUser() {
   return state.users.find((user) => user.id === sessionUserId) || null;
 }
 
+function syncAgendaViewControls() {
+  const isListView = agendaViewMode === "list";
+  elements.agendaListViewButton.classList.toggle("view-toggle--active", isListView);
+  elements.agendaCalendarViewButton.classList.toggle("view-toggle--active", !isListView);
+  elements.agendaListViewButton.setAttribute("aria-pressed", String(isListView));
+  elements.agendaCalendarViewButton.setAttribute("aria-pressed", String(!isListView));
+}
+
 function getStatusLabel(status) {
   return STATUS_META[status]?.label || capitalize(status.replaceAll("_", " "));
 }
@@ -1071,6 +1186,113 @@ function renderStatusOptions(statuses, currentStatus) {
 
 function getArtistById(artistId) {
   return state.users.find((user) => user.id === artistId);
+}
+
+function ensureCalendarMonthCursor(events) {
+  if (calendarMonthCursor) return;
+
+  const todayKey = formatMonthKey(new Date());
+  const currentMonthEvent = events.find((eventItem) => eventItem.date.startsWith(todayKey));
+  const fallbackDate = currentMonthEvent?.date || events[0]?.date;
+  calendarMonthCursor = getMonthCursorFromDateString(fallbackDate);
+}
+
+function getMonthEvents(events, monthCursor) {
+  const monthKey = formatMonthKey(monthCursor);
+  return events.filter((eventItem) => eventItem.date.startsWith(monthKey));
+}
+
+function renderCalendarMonth(events, monthCursor) {
+  const monthEvents = getMonthEvents(events, monthCursor);
+  const eventsByDate = monthEvents.reduce((accumulator, eventItem) => {
+    accumulator[eventItem.date] ||= [];
+    accumulator[eventItem.date].push(eventItem);
+    return accumulator;
+  }, {});
+  const monthStart = getMonthStart(monthCursor);
+  const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+  const startOffset = (monthStart.getDay() + 6) % 7;
+  const cells = [];
+
+  for (let index = 0; index < startOffset; index += 1) {
+    cells.push(`<div class="calendar-cell calendar-cell--empty" aria-hidden="true"></div>`);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const dateKey = formatDateKey(monthStart.getFullYear(), monthStart.getMonth(), day);
+    const dayEvents = eventsByDate[dateKey] || [];
+
+    cells.push(`
+      <div class="calendar-cell ${dayEvents.length ? "" : "calendar-cell--quiet"}">
+        <div class="calendar-cell__day">${day}</div>
+        <div class="calendar-cell__events">
+          ${dayEvents
+            .map(
+              (eventItem) => `
+                <button
+                  class="calendar-event ${selectedCalendarEventId === eventItem.id ? "calendar-event--active" : ""}"
+                  type="button"
+                  data-calendar-event-id="${eventItem.id}"
+                >
+                  <span class="calendar-event__name">${eventItem.clientName}</span>
+                  <span class="event-status-dots" aria-label="Stato richieste">
+                    ${renderStatusDots(eventItem.assignments)}
+                  </span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      </div>
+    `);
+  }
+
+  return `
+    <div class="calendar-grid" role="grid" aria-label="${formatCalendarMonth(monthCursor)}">
+      ${["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+        .map((label) => `<div class="calendar-grid__weekday">${label}</div>`)
+        .join("")}
+      ${cells.join("")}
+    </div>
+  `;
+}
+
+function createShiftedMonthCursor(monthCursor, offset) {
+  const baseDate = getMonthStart(monthCursor);
+  return new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
+}
+
+function getMonthCursorFromDateString(dateString) {
+  if (!dateString) {
+    return getMonthStart(new Date());
+  }
+
+  const [year, month] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, 1);
+}
+
+function getMonthStart(dateValue) {
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function formatMonthKey(dateValue) {
+  const date = getMonthStart(dateValue);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${date.getFullYear()}-${month}`;
+}
+
+function formatDateKey(year, monthIndex, day) {
+  const month = String(monthIndex + 1).padStart(2, "0");
+  const date = String(day).padStart(2, "0");
+  return `${year}-${month}-${date}`;
+}
+
+function formatCalendarMonth(dateValue) {
+  return new Intl.DateTimeFormat("it-IT", {
+    month: "long",
+    year: "numeric",
+  }).format(getMonthStart(dateValue));
 }
 
 function renderStatusDots(assignments) {

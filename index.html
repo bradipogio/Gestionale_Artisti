@@ -113,7 +113,35 @@
           <section id="agendaPanel" class="utility-panel utility-panel--agenda card">
             <div class="utility-panel__head">
               <span id="agendaSummary" class="pill pill--accent">0 schede</span>
+              <div class="agenda-view-switch" role="group" aria-label="Vista agenda">
+                <button
+                  id="agendaListViewButton"
+                  class="view-toggle view-toggle--active"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  Elenco
+                </button>
+                <button
+                  id="agendaCalendarViewButton"
+                  class="view-toggle"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  Calendario
+                </button>
+              </div>
             </div>
+            <div id="calendarToolbar" class="calendar-toolbar hidden">
+              <button id="calendarPrevButton" class="calendar-nav" type="button" aria-label="Mese precedente">
+                <span aria-hidden="true">‹</span>
+              </button>
+              <strong id="calendarLabel" class="calendar-label"></strong>
+              <button id="calendarNextButton" class="calendar-nav" type="button" aria-label="Mese successivo">
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
+            <div id="calendarView" class="calendar-view hidden"></div>
             <div id="eventsList" class="events-list"></div>
           </section>
         </div>
