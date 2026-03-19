@@ -67,6 +67,7 @@ const state = loadState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
 let activeModal = "";
+let openEventIds = new Set();
 
 const elements = {
   app: document.querySelector("#app"),
@@ -171,6 +172,7 @@ function bindEvents() {
   elements.selectedEventArtists.addEventListener("click", handleSelectedEventArtistsClick);
   elements.eventsList.addEventListener("click", handleEventsClick);
   elements.eventsList.addEventListener("change", handleStatusChange);
+  elements.eventsList.addEventListener("toggle", handleEventCardToggle, true);
   elements.resetFilters.addEventListener("click", resetFilters);
   elements.filterFrom.addEventListener("input", renderApp);
   elements.filterTo.addEventListener("input", renderApp);
@@ -406,6 +408,17 @@ function handleStatusChange(event) {
   assignment.updatedAt = new Date().toISOString();
   saveState();
   renderApp();
+}
+
+function handleEventCardToggle(event) {
+  const card = event.target.closest(".event-card[data-event-id]");
+  if (!card) return;
+
+  if (card.open) {
+    openEventIds.add(card.dataset.eventId);
+  } else {
+    openEventIds.delete(card.dataset.eventId);
+  }
 }
 
 function resetFilters() {
@@ -719,7 +732,7 @@ function renderEvents(events, currentUser) {
         : "";
 
       return `
-        <details class="event-card">
+        <details class="event-card" data-event-id="${eventItem.id}" ${openEventIds.has(eventItem.id) ? "open" : ""}>
           <summary class="event-card__summary">
             <div class="event-card__summary-row">
               <div>

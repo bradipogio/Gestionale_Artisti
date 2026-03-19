@@ -718,18 +718,18 @@ h2 {
 }
 
 .status--inviata {
-  background: #f2e6cf;
-  color: var(--warning);
+  background: #f6e6a8;
+  color: #866300;
 }
 
 .status--accettata {
-  background: #d9ebdf;
-  color: var(--success);
+  background: #f4c7c3;
+  color: #a1332d;
 }
 
 .status--confermata {
-  background: #ead8d2;
-  color: var(--danger);
+  background: #d9ebdf;
+  color: #2f7a58;
 }
 
 .status-select {
