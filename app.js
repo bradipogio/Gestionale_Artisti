@@ -735,19 +735,9 @@ function renderDashboard(summary, role) {
         ]
       : [
           {
-            label: "Richieste",
-            value: summary.totalEvents,
-            hint: "eventi tuoi",
-          },
-          {
-            label: "Da rispondere",
+            label: "In attesa di risposta",
             value: summary.inviati,
             hint: "in attesa",
-          },
-          {
-            label: "Accettate",
-            value: summary.accettati,
-            hint: "in attesa cliente",
           },
           {
             label: "Confermate",
@@ -755,9 +745,9 @@ function renderDashboard(summary, role) {
             hint: "chiuse",
           },
           {
-            label: "Cancellate",
-            value: summary.cancellati,
-            hint: "non disponibili",
+            label: "Tutte le richieste",
+            value: summary.totalEvents,
+            hint: "eventi tuoi",
           },
         ];
 
@@ -868,6 +858,7 @@ function renderAdminEventCard(eventItem, currentUser) {
 function renderArtistEventCard(eventItem, currentUser) {
   const assignment = eventItem.assignments[0];
   const statusLabel = capitalize(assignment.status);
+  const statusDotsMarkup = renderStatusDots(eventItem.assignments);
   const notesMarkup = eventItem.notes
     ? `
       <div class="event-body-block">
@@ -885,18 +876,21 @@ function renderArtistEventCard(eventItem, currentUser) {
             <p class="section-kicker">La tua data</p>
             <h3 class="event-title">${eventItem.clientName}</h3>
           </div>
-          <div class="event-card__summary-side">
+          <div class="event-card__summary-side event-card__summary-side--artist">
+            <div class="event-status-dots" aria-label="Stato richieste">
+              ${statusDotsMarkup}
+            </div>
             <span class="pill pill--accent">${formatDate(eventItem.date)}</span>
             <span class="event-card__chevron" aria-hidden="true"></span>
           </div>
         </div>
+      </summary>
+      <div class="event-card__body">
         <div class="event-card__summary-meta">
           <span class="meta-pill"><strong>Location</strong>${eventItem.location}</span>
           <span class="meta-pill"><strong>Richiesta</strong>${eventItem.requestedActs}</span>
           <span class="meta-pill meta-pill--status"><strong>Il tuo stato</strong><span class="status-badge status--${assignment.status}">${statusLabel}</span></span>
         </div>
-      </summary>
-      <div class="event-card__body">
         ${notesMarkup}
         <div class="event-body-block">
           <p class="event-body-label">La tua risposta</p>
