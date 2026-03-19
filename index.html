@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestionale Artisti</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Fornitura artisti per matrimoni</p>
+          <h1>Gestisci richieste, disponibilita e conferme in un unico posto.</h1>
+          <p class="hero-copy">
+            MVP per coordinare eventi, inviare richieste agli artisti e monitorare
+            chi ha risposto o e ancora in attesa.
+          </p>
+        </div>
+        <div class="login-panel card">
+          <div class="login-panel__head">
+            <span class="pill">Accesso demo</span>
+            <button id="logoutButton" class="button button--ghost hidden" type="button">
+              Esci
+            </button>
+          </div>
+          <form id="loginForm" class="stack">
+            <label class="field">
+              <span>Utente</span>
+              <select id="loginUserId"></select>
+            </label>
+            <button class="button" type="submit">Entra nella webapp</button>
+          </form>
+          <div id="sessionInfo" class="session-info hidden"></div>
+        </div>
+      </header>
+
+      <main id="app" class="app hidden">
+        <section class="toolbar card">
+          <div>
+            <p class="section-kicker">Filtro rapido</p>
+            <h2>Ricerca per data</h2>
+          </div>
+          <div class="toolbar__filters">
+            <label class="field">
+              <span>Dal</span>
+              <input id="filterFrom" type="date" />
+            </label>
+            <label class="field">
+              <span>Al</span>
+              <input id="filterTo" type="date" />
+            </label>
+            <label class="field field--search">
+              <span>Ricerca testo</span>
+              <input
+                id="filterText"
+                type="search"
+                placeholder="Cliente, location, artista o tipo di formazione"
+              />
+            </label>
+            <button id="resetFilters" class="button button--ghost" type="button">
+              Reset
+            </button>
+          </div>
+        </section>
+
+        <section id="dashboardSection" class="dashboard"></section>
+
+        <section id="adminSection" class="admin-layout hidden">
+          <article class="card">
+            <div class="section-heading">
+              <div>
+                <p class="section-kicker">Admin</p>
+                <h2>Nuovo evento</h2>
+              </div>
+              <span class="pill pill--accent">Richiesta cliente</span>
+            </div>
+            <form id="eventForm" class="form-grid">
+              <label class="field">
+                <span>Cliente</span>
+                <input
+                  id="clientName"
+                  name="clientName"
+                  type="text"
+                  placeholder="Es. Villa Bianchi Wedding"
+                  required
+                />
+              </label>
+              <label class="field">
+                <span>Data</span>
+                <input id="eventDate" name="eventDate" type="date" required />
+              </label>
+              <label class="field">
+                <span>Location</span>
+                <input
+                  id="location"
+                  name="location"
+                  type="text"
+                  placeholder="Es. Lago di Como"
+                  required
+                />
+              </label>
+              <label class="field">
+                <span>Richiesta musicale</span>
+                <input
+                  id="requestedActs"
+                  name="requestedActs"
+                  type="text"
+                  placeholder="Es. String duo + cantante lirico"
+                  required
+                />
+              </label>
+              <label class="field field--full">
+                <span>Note organizzative</span>
+                <textarea
+                  id="eventNotes"
+                  name="eventNotes"
+                  rows="3"
+                  placeholder="Orario cerimonia, richieste speciali, logistica..."
+                ></textarea>
+              </label>
+              <fieldset class="field field--full">
+                <legend>Artisti da contattare</legend>
+                <div id="artistCheckboxes" class="artist-selector"></div>
+              </fieldset>
+              <button class="button" type="submit">Crea evento e invia richieste</button>
+            </form>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">Agenda</p>
+              <h2 id="eventsTitle">Eventi e richieste</h2>
+            </div>
+            <span id="resultsCount" class="pill"></span>
+          </div>
+          <div id="eventsList" class="events-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <template id="statCardTemplate">
+      <article class="card stat-card">
+        <p class="stat-card__label"></p>
+        <strong class="stat-card__value"></strong>
+        <span class="stat-card__hint"></span>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
