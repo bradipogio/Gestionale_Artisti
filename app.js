@@ -897,22 +897,10 @@ function renderArtistEventCard(eventItem, currentUser) {
         </div>
       </summary>
       <div class="event-card__body">
-        <div class="artist-focus">
-          <div class="artist-focus__meta">
-            <span class="artist-focus__label">Coinvolti</span>
-            <strong>${formatCount(eventItem.assignments.length, "1 artista", `${eventItem.assignments.length} artisti`)}</strong>
-          </div>
-          <div class="artist-focus__meta">
-            <span class="artist-focus__label">Risposta richiesta</span>
-            <strong>${assignment.status === "inviata" ? "Da inviare" : statusLabel}</strong>
-          </div>
-        </div>
         ${notesMarkup}
         <div class="event-body-block">
           <p class="event-body-label">La tua risposta</p>
-          <div class="artist-response-card">
-            ${renderAssignment(eventItem, assignment, currentUser)}
-          </div>
+          ${renderArtistResponse(eventItem, assignment)}
         </div>
       </div>
     </details>
@@ -980,6 +968,44 @@ function renderAssignment(eventItem, assignment, currentUser) {
         <span class="status-badge status--${assignment.status}">${statusLabel}</span>
         ${controls}
       </div>
+    </div>
+  `;
+}
+
+function renderArtistResponse(eventItem, assignment) {
+  if (assignment.status === "confermata") {
+    return `
+      <div class="artist-response-card artist-response-card--final">
+        <span class="assignment__hint assignment__hint--final">
+          Richiesta confermata definitivamente.
+        </span>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="artist-response-card">
+      <select
+        class="status-select status-select--response"
+        data-assignment-status="true"
+        data-event-id="${eventItem.id}"
+        data-assignment-id="${assignment.id}"
+      >
+        <option value="" ${assignment.status === "inviata" ? "selected" : ""} disabled hidden>
+          Rispondi
+        </option>
+        <option value="accettata" ${assignment.status === "accettata" ? "selected" : ""}>
+          Accettata
+        </option>
+        <option value="cancellata" ${assignment.status === "cancellata" ? "selected" : ""}>
+          Cancellata
+        </option>
+      </select>
+      <span class="assignment__hint">
+        ${assignment.status === "inviata"
+          ? "Scegli se accettare o cancellare."
+          : `Stato attuale: ${capitalize(assignment.status)}.`}
+      </span>
     </div>
   `;
 }

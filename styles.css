@@ -736,32 +736,17 @@ h2 {
   background: rgba(255, 251, 245, 0.72);
 }
 
-.artist-focus {
+.artist-response-card {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
-}
-
-.artist-focus__meta {
-  display: grid;
-  gap: 4px;
-  padding: 12px 14px;
+  padding: 14px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(94, 67, 51, 0.08);
 }
 
-.artist-focus__label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-
-.artist-response-card .assignment {
-  background: rgba(255, 255, 255, 0.94);
+.artist-response-card--final {
+  padding-block: 16px;
 }
 
 .icon-button {
@@ -1005,10 +990,6 @@ h2 {
 
   .event-body-top {
     justify-content: space-between;
-  }
-
-  .artist-focus {
-    grid-template-columns: 1fr;
   }
 
   .meta-pill {
