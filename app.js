@@ -1,4 +1,4 @@
-const API_STATE_URL = "/api/state";
+const API_STATE_URL = getApiStateUrl();
 const SESSION_KEY = "gestionale-artisti-session-v1";
 const AGENDA_VIEW_KEY = "gestionale-artisti-agenda-view-v1";
 const SYNC_POLL_INTERVAL_MS = 15000;
@@ -103,6 +103,19 @@ const seedState = {
     },
   ],
 };
+
+function getApiStateUrl() {
+  const configuredUrl =
+    window.GESTIONALE_CONFIG?.apiStateUrl ||
+    window.GESTIONALE_API_URL ||
+    "";
+
+  if (typeof configuredUrl === "string" && configuredUrl.trim()) {
+    return configuredUrl.trim();
+  }
+
+  return "/api/state";
+}
 
 function cloneSeedState() {
   return JSON.parse(JSON.stringify(seedState));

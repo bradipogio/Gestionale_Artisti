@@ -14,6 +14,7 @@ HOST = os.environ.get("HOST", "0.0.0.0")
 ROOT_DIR = Path(__file__).resolve().parent
 DB_PATH = ROOT_DIR / "db.json"
 WRITE_LOCK = threading.Lock()
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
 
 STATIC_ROUTES = {
     "/": "index.html",
@@ -148,6 +149,13 @@ class AppHandler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.handle_request(include_body=False)
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.end_headers()
+
     def do_PUT(self):
         parsed = urlparse(self.path)
         if parsed.path != "/api/state":
@@ -212,6 +220,14 @@ class AppHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         return
+
+    def end_headers(self):
+        self.send_cors_headers()
+        super().end_headers()
+
+    def send_cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("Vary", "Origin")
 
 
 def main():
