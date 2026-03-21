@@ -1147,7 +1147,6 @@ function renderAdminEventCard(eventItem, currentUser, forceOpen = false) {
       <summary class="event-card__summary">
         <div class="event-card__summary-row">
           <div>
-            <p class="section-kicker">Evento</p>
             <h3 class="event-title">${eventItem.title}</h3>
           </div>
           <div class="event-card__summary-side event-card__summary-side--admin">
