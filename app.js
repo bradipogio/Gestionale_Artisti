@@ -1,7 +1,6 @@
-const API_STATE_URL = getApiStateUrl();
+const STORAGE_KEY = "gestionale-artisti-state-v1";
 const SESSION_KEY = "gestionale-artisti-session-v1";
 const AGENDA_VIEW_KEY = "gestionale-artisti-agenda-view-v1";
-const SYNC_POLL_INTERVAL_MS = 15000;
 
 const ASSIGNMENT_STATUSES = {
   pending: "inviata",
@@ -104,19 +103,6 @@ const seedState = {
   ],
 };
 
-function getApiStateUrl() {
-  const configuredUrl =
-    window.GESTIONALE_CONFIG?.apiStateUrl ||
-    window.GESTIONALE_API_URL ||
-    "";
-
-  if (typeof configuredUrl === "string" && configuredUrl.trim()) {
-    return configuredUrl.trim();
-  }
-
-  return "/api/state";
-}
-
 function cloneSeedState() {
   return JSON.parse(JSON.stringify(seedState));
 }
@@ -177,25 +163,7 @@ function normalizeEvent(eventItem, locations) {
   };
 }
 
-function createEmptyState() {
-  return {
-    users: [],
-    locations: [],
-    events: [],
-  };
-}
-
-function replaceState(nextState) {
-  state.users = nextState.users;
-  state.locations = nextState.locations;
-  state.events = nextState.events;
-}
-
-function snapshotState() {
-  return JSON.parse(JSON.stringify(state));
-}
-
-const state = createEmptyState();
+const state = loadState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
 let activeModal = "";
@@ -203,8 +171,6 @@ let openEventId = "";
 let agendaViewMode = localStorage.getItem(AGENDA_VIEW_KEY) === "calendar" ? "calendar" : "list";
 let calendarMonthCursor = null;
 let selectedCalendarEventId = "";
-let isSavingState = false;
-let syncIntervalId = 0;
 
 const elements = {
   app: document.querySelector("#app"),
@@ -271,111 +237,33 @@ const elements = {
   statCardTemplate: document.querySelector("#statCardTemplate"),
 };
 
-void bootstrap();
+bootstrap();
 
-async function bootstrap() {
-  setLoadingState(true);
-  bindEvents();
-
-  try {
-    replaceState(await loadState());
-  } catch (error) {
-    console.error("Impossibile caricare lo stato remoto.", error);
-    replaceState(cloneSeedState());
-    alert("API remota non raggiungibile. Sto usando una copia locale temporanea.");
-  }
-
-  refreshUiFromState();
-  setLoadingState(false);
-  startRemoteSync();
-}
-
-async function loadState() {
-  const response = await fetch(`${API_STATE_URL}?ts=${Date.now()}`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`GET ${API_STATE_URL} failed with ${response.status}`);
-  }
-
-  return normalizeState(await response.json());
-}
-
-async function saveState() {
-  isSavingState = true;
-
-  try {
-    const response = await fetch(API_STATE_URL, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(state),
-    });
-
-    if (!response.ok) {
-      throw new Error(`PUT ${API_STATE_URL} failed with ${response.status}`);
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Impossibile salvare lo stato remoto.", error);
-    alert("Salvataggio non riuscito. Ricarico i dati dal server.");
-    return false;
-  } finally {
-    isSavingState = false;
-  }
-}
-
-function setLoadingState(isLoading) {
-  elements.loginButton.disabled = isLoading;
-  elements.loginButton.textContent = isLoading ? "Caricamento..." : "Entra nella webapp";
-}
-
-function refreshUiFromState() {
+function bootstrap() {
   populateLoginUsers();
   renderLocationOptions();
   renderArtistOptions();
+  bindEvents();
   renderApp();
 }
 
-async function restoreRemoteState() {
-  try {
-    replaceState(await loadState());
-  } catch (error) {
-    console.error("Impossibile riallineare lo stato col server.", error);
+function loadState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seedState));
+    return cloneSeedState();
   }
 
-  refreshUiFromState();
-}
-
-async function refreshStateFromServer(silent = false) {
-  if (isSavingState || activeModal) return;
-
   try {
-    const nextState = await loadState();
-    if (JSON.stringify(nextState) === JSON.stringify(state)) return;
-
-    replaceState(nextState);
-    refreshUiFromState();
-  } catch (error) {
-    if (!silent) {
-      console.error("Impossibile aggiornare lo stato dal server.", error);
-    }
+    return normalizeState(JSON.parse(saved));
+  } catch {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seedState));
+    return cloneSeedState();
   }
 }
 
-function startRemoteSync() {
-  if (syncIntervalId) {
-    window.clearInterval(syncIntervalId);
-  }
-
-  syncIntervalId = window.setInterval(() => {
-    if (!document.hidden) {
-      void refreshStateFromServer(true);
-    }
-  }, SYNC_POLL_INTERVAL_MS);
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 function bindEvents() {
@@ -420,8 +308,6 @@ function bindEvents() {
   elements.resetFilters.addEventListener("click", resetFilters);
   elements.filterText.addEventListener("input", renderApp);
   document.addEventListener("click", handleDocumentClick);
-  document.addEventListener("visibilitychange", handleVisibilityChange);
-  window.addEventListener("focus", handleWindowFocus);
 }
 
 function handleSessionSubmit(event) {
@@ -443,9 +329,8 @@ function handleLogout() {
   renderApp();
 }
 
-async function handleCreateEvent(event) {
+function handleCreateEvent(event) {
   event.preventDefault();
-  const previousState = snapshotState();
   const formData = new FormData(elements.eventForm);
   const eventId = String(formData.get("eventId") || "").trim();
   const title = String(formData.get("eventName")).trim();
@@ -512,20 +397,14 @@ async function handleCreateEvent(event) {
     });
   }
 
-  if (!(await saveState())) {
-    replaceState(previousState);
-    await restoreRemoteState();
-    return;
-  }
-
+  saveState();
   resetEventForm();
   closeModal();
   renderApp();
 }
 
-async function handleArtistSubmit(event) {
+function handleArtistSubmit(event) {
   event.preventDefault();
-  const previousState = snapshotState();
   const formData = new FormData(elements.artistForm);
   const artistId = String(formData.get("artistId") || "").trim();
   const name = String(formData.get("artistName") || "").trim();
@@ -551,12 +430,7 @@ async function handleArtistSubmit(event) {
     });
   }
 
-  if (!(await saveState())) {
-    replaceState(previousState);
-    await restoreRemoteState();
-    return;
-  }
-
+  saveState();
   populateLoginUsers();
   renderArtistOptions();
   elements.artistFeedback.textContent = isEditing
@@ -568,9 +442,8 @@ async function handleArtistSubmit(event) {
   renderApp();
 }
 
-async function handleLocationSubmit(event) {
+function handleLocationSubmit(event) {
   event.preventDefault();
-  const previousState = snapshotState();
   const formData = new FormData(elements.locationForm);
   const locationId = String(formData.get("locationId") || "").trim();
   const name = String(formData.get("locationName") || "").trim();
@@ -606,12 +479,7 @@ async function handleLocationSubmit(event) {
     });
   }
 
-  if (!(await saveState())) {
-    replaceState(previousState);
-    await restoreRemoteState();
-    return;
-  }
-
+  saveState();
   renderLocationOptions();
   elements.locationFeedback.textContent = isEditing
     ? `${name} aggiornata.`
@@ -698,16 +566,6 @@ function handleDocumentClick(event) {
   }
 }
 
-function handleVisibilityChange() {
-  if (!document.hidden) {
-    void refreshStateFromServer(true);
-  }
-}
-
-function handleWindowFocus() {
-  void refreshStateFromServer(true);
-}
-
 function openModal(type) {
   activeModal = type;
   elements.quickActionsMenu.classList.add("hidden");
@@ -787,11 +645,10 @@ function handleCalendarClick(event) {
   renderApp();
 }
 
-async function handleStatusChange(event) {
+function handleStatusChange(event) {
   const select = event.target.closest("[data-assignment-status]");
   if (!select) return;
   if (!select.value) return;
-  const previousState = snapshotState();
 
   const eventId = select.dataset.eventId;
   const assignmentId = select.dataset.assignmentId;
@@ -808,13 +665,7 @@ async function handleStatusChange(event) {
 
   assignment.status = select.value;
   assignment.updatedAt = new Date().toISOString();
-
-  if (!(await saveState())) {
-    replaceState(previousState);
-    await restoreRemoteState();
-    return;
-  }
-
+  saveState();
   renderApp();
 }
 
