@@ -1,0 +1,93 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "name": "Admin",
+      "role": "admin"
+    },
+    {
+      "id": "artist-1",
+      "name": "Giulia Serra",
+      "role": "artist",
+      "specialty": "Violinista"
+    },
+    {
+      "id": "artist-2",
+      "name": "Lorenzo Ferri",
+      "role": "artist",
+      "specialty": "Violoncellista"
+    },
+    {
+      "id": "artist-3",
+      "name": "Elisa Conti",
+      "role": "artist",
+      "specialty": "Cantante lirica"
+    },
+    {
+      "id": "artist-4",
+      "name": "Matteo Valli",
+      "role": "artist",
+      "specialty": "Pianista"
+    }
+  ],
+  "locations": [
+    {
+      "id": "location-1",
+      "name": "Villa Aurelia, Roma",
+      "mapsUrl": "https://maps.google.com/?q=Villa+Aurelia+Roma"
+    },
+    {
+      "id": "location-2",
+      "name": "Lago di Garda",
+      "mapsUrl": "https://maps.google.com/?q=Lago+di+Garda"
+    }
+  ],
+  "events": [
+    {
+      "id": "event-1",
+      "title": "Wedding Martini",
+      "date": "2026-06-06",
+      "locationId": "location-1",
+      "locationName": "Villa Aurelia, Roma",
+      "info": "Cerimonia ore 17:30, repertorio classico e ingresso sposi.",
+      "assignments": [
+        {
+          "id": "assignment-1",
+          "artistId": "artist-1",
+          "status": "accettata",
+          "updatedAt": "2026-03-21T09:00:00.000Z"
+        },
+        {
+          "id": "assignment-2",
+          "artistId": "artist-2",
+          "status": "inviata",
+          "updatedAt": "2026-03-21T09:00:00.000Z"
+        },
+        {
+          "id": "assignment-3",
+          "artistId": "artist-3",
+          "status": "confermata",
+          "updatedAt": "2026-03-21T09:00:00.000Z"
+        }
+      ],
+      "createdAt": "2026-03-21T09:00:00.000Z"
+    },
+    {
+      "id": "event-2",
+      "title": "Ricevimento Villa Blu",
+      "date": "2026-07-12",
+      "locationId": "location-2",
+      "locationName": "Lago di Garda",
+      "info": "Setup entro le 18:00, service gia incluso.",
+      "assignments": [
+        {
+          "id": "assignment-4",
+          "artistId": "artist-4",
+          "status": "inviata",
+          "updatedAt": "2026-03-21T09:00:00.000Z"
+        }
+      ],
+      "createdAt": "2026-03-21T09:00:00.000Z"
+    }
+  ]
+}

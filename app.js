@@ -1,6 +1,7 @@
-const STORAGE_KEY = "gestionale-artisti-state-v1";
+const API_STATE_URL = "/api/state";
 const SESSION_KEY = "gestionale-artisti-session-v1";
 const AGENDA_VIEW_KEY = "gestionale-artisti-agenda-view-v1";
+const SYNC_POLL_INTERVAL_MS = 15000;
 
 const ASSIGNMENT_STATUSES = {
   pending: "inviata",
@@ -163,7 +164,25 @@ function normalizeEvent(eventItem, locations) {
   };
 }
 
-const state = loadState();
+function createEmptyState() {
+  return {
+    users: [],
+    locations: [],
+    events: [],
+  };
+}
+
+function replaceState(nextState) {
+  state.users = nextState.users;
+  state.locations = nextState.locations;
+  state.events = nextState.events;
+}
+
+function snapshotState() {
+  return JSON.parse(JSON.stringify(state));
+}
+
+const state = createEmptyState();
 let sessionUserId = localStorage.getItem(SESSION_KEY) || "";
 let eventArtistSelection = [];
 let activeModal = "";
@@ -171,6 +190,8 @@ let openEventId = "";
 let agendaViewMode = localStorage.getItem(AGENDA_VIEW_KEY) === "calendar" ? "calendar" : "list";
 let calendarMonthCursor = null;
 let selectedCalendarEventId = "";
+let isSavingState = false;
+let syncIntervalId = 0;
 
 const elements = {
   app: document.querySelector("#app"),
@@ -237,33 +258,111 @@ const elements = {
   statCardTemplate: document.querySelector("#statCardTemplate"),
 };
 
-bootstrap();
+void bootstrap();
 
-function bootstrap() {
+async function bootstrap() {
+  setLoadingState(true);
+  bindEvents();
+
+  try {
+    replaceState(await loadState());
+  } catch (error) {
+    console.error("Impossibile caricare lo stato remoto.", error);
+    replaceState(cloneSeedState());
+    alert("API remota non raggiungibile. Sto usando una copia locale temporanea.");
+  }
+
+  refreshUiFromState();
+  setLoadingState(false);
+  startRemoteSync();
+}
+
+async function loadState() {
+  const response = await fetch(`${API_STATE_URL}?ts=${Date.now()}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`GET ${API_STATE_URL} failed with ${response.status}`);
+  }
+
+  return normalizeState(await response.json());
+}
+
+async function saveState() {
+  isSavingState = true;
+
+  try {
+    const response = await fetch(API_STATE_URL, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(state),
+    });
+
+    if (!response.ok) {
+      throw new Error(`PUT ${API_STATE_URL} failed with ${response.status}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Impossibile salvare lo stato remoto.", error);
+    alert("Salvataggio non riuscito. Ricarico i dati dal server.");
+    return false;
+  } finally {
+    isSavingState = false;
+  }
+}
+
+function setLoadingState(isLoading) {
+  elements.loginButton.disabled = isLoading;
+  elements.loginButton.textContent = isLoading ? "Caricamento..." : "Entra nella webapp";
+}
+
+function refreshUiFromState() {
   populateLoginUsers();
   renderLocationOptions();
   renderArtistOptions();
-  bindEvents();
   renderApp();
 }
 
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seedState));
-    return cloneSeedState();
+async function restoreRemoteState() {
+  try {
+    replaceState(await loadState());
+  } catch (error) {
+    console.error("Impossibile riallineare lo stato col server.", error);
   }
 
+  refreshUiFromState();
+}
+
+async function refreshStateFromServer(silent = false) {
+  if (isSavingState || activeModal) return;
+
   try {
-    return normalizeState(JSON.parse(saved));
-  } catch {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seedState));
-    return cloneSeedState();
+    const nextState = await loadState();
+    if (JSON.stringify(nextState) === JSON.stringify(state)) return;
+
+    replaceState(nextState);
+    refreshUiFromState();
+  } catch (error) {
+    if (!silent) {
+      console.error("Impossibile aggiornare lo stato dal server.", error);
+    }
   }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function startRemoteSync() {
+  if (syncIntervalId) {
+    window.clearInterval(syncIntervalId);
+  }
+
+  syncIntervalId = window.setInterval(() => {
+    if (!document.hidden) {
+      void refreshStateFromServer(true);
+    }
+  }, SYNC_POLL_INTERVAL_MS);
 }
 
 function bindEvents() {
@@ -308,6 +407,8 @@ function bindEvents() {
   elements.resetFilters.addEventListener("click", resetFilters);
   elements.filterText.addEventListener("input", renderApp);
   document.addEventListener("click", handleDocumentClick);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("focus", handleWindowFocus);
 }
 
 function handleSessionSubmit(event) {
@@ -329,8 +430,9 @@ function handleLogout() {
   renderApp();
 }
 
-function handleCreateEvent(event) {
+async function handleCreateEvent(event) {
   event.preventDefault();
+  const previousState = snapshotState();
   const formData = new FormData(elements.eventForm);
   const eventId = String(formData.get("eventId") || "").trim();
   const title = String(formData.get("eventName")).trim();
@@ -397,14 +499,20 @@ function handleCreateEvent(event) {
     });
   }
 
-  saveState();
+  if (!(await saveState())) {
+    replaceState(previousState);
+    await restoreRemoteState();
+    return;
+  }
+
   resetEventForm();
   closeModal();
   renderApp();
 }
 
-function handleArtistSubmit(event) {
+async function handleArtistSubmit(event) {
   event.preventDefault();
+  const previousState = snapshotState();
   const formData = new FormData(elements.artistForm);
   const artistId = String(formData.get("artistId") || "").trim();
   const name = String(formData.get("artistName") || "").trim();
@@ -430,7 +538,12 @@ function handleArtistSubmit(event) {
     });
   }
 
-  saveState();
+  if (!(await saveState())) {
+    replaceState(previousState);
+    await restoreRemoteState();
+    return;
+  }
+
   populateLoginUsers();
   renderArtistOptions();
   elements.artistFeedback.textContent = isEditing
@@ -442,8 +555,9 @@ function handleArtistSubmit(event) {
   renderApp();
 }
 
-function handleLocationSubmit(event) {
+async function handleLocationSubmit(event) {
   event.preventDefault();
+  const previousState = snapshotState();
   const formData = new FormData(elements.locationForm);
   const locationId = String(formData.get("locationId") || "").trim();
   const name = String(formData.get("locationName") || "").trim();
@@ -479,7 +593,12 @@ function handleLocationSubmit(event) {
     });
   }
 
-  saveState();
+  if (!(await saveState())) {
+    replaceState(previousState);
+    await restoreRemoteState();
+    return;
+  }
+
   renderLocationOptions();
   elements.locationFeedback.textContent = isEditing
     ? `${name} aggiornata.`
@@ -566,6 +685,16 @@ function handleDocumentClick(event) {
   }
 }
 
+function handleVisibilityChange() {
+  if (!document.hidden) {
+    void refreshStateFromServer(true);
+  }
+}
+
+function handleWindowFocus() {
+  void refreshStateFromServer(true);
+}
+
 function openModal(type) {
   activeModal = type;
   elements.quickActionsMenu.classList.add("hidden");
@@ -645,10 +774,11 @@ function handleCalendarClick(event) {
   renderApp();
 }
 
-function handleStatusChange(event) {
+async function handleStatusChange(event) {
   const select = event.target.closest("[data-assignment-status]");
   if (!select) return;
   if (!select.value) return;
+  const previousState = snapshotState();
 
   const eventId = select.dataset.eventId;
   const assignmentId = select.dataset.assignmentId;
@@ -665,7 +795,13 @@ function handleStatusChange(event) {
 
   assignment.status = select.value;
   assignment.updatedAt = new Date().toISOString();
-  saveState();
+
+  if (!(await saveState())) {
+    replaceState(previousState);
+    await restoreRemoteState();
+    return;
+  }
+
   renderApp();
 }
 
@@ -763,6 +899,12 @@ function startEventEdit(eventItem) {
 }
 
 function populateLoginUsers() {
+  if (!state.users.length) {
+    elements.loginUserId.innerHTML = "";
+    elements.accountUserId.innerHTML = "";
+    return;
+  }
+
   const optionsMarkup = state.users
     .map(
       (user) => `
@@ -779,6 +921,11 @@ function populateLoginUsers() {
   if (!sessionUserId) {
     elements.loginUserId.value = state.users[0].id;
     elements.accountUserId.value = state.users[0].id;
+  } else if (!state.users.some((user) => user.id === sessionUserId)) {
+    sessionUserId = state.users[0].id;
+    localStorage.setItem(SESSION_KEY, sessionUserId);
+    elements.loginUserId.value = sessionUserId;
+    elements.accountUserId.value = sessionUserId;
   } else {
     elements.loginUserId.value = sessionUserId;
     elements.accountUserId.value = sessionUserId;
