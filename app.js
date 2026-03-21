@@ -988,17 +988,17 @@ function getSummary(events) {
   const assignments = events.flatMap((eventItem) => eventItem.assignments);
   return {
     totalEvents: events.length,
-    richiesteAperte: assignments.filter(
+    totalRequests: assignments.length,
+    openRequests: assignments.filter(
       (item) =>
         item.status !== ASSIGNMENT_STATUSES.confirmed &&
         item.status !== ASSIGNMENT_STATUSES.cancelled,
     ).length,
-    inviati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.pending).length,
-    accettati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.accepted).length,
-    nonAccettati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.declined)
+    waitingArtist: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.pending).length,
+    waitingClient: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.accepted)
       .length,
-    confermati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.confirmed).length,
-    cancellati: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.cancelled).length,
+    confirmed: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.confirmed).length,
+    cancelled: assignments.filter((item) => item.status === ASSIGNMENT_STATUSES.cancelled).length,
   };
 }
 
@@ -1007,38 +1007,54 @@ function renderDashboard(summary, role) {
     role === "admin"
       ? [
           {
-            label: "Eventi",
+            label: "Tot eventi",
             value: summary.totalEvents,
           },
           {
-            label: "Aperte",
-            value: summary.richiesteAperte,
+            label: "Tot richieste",
+            value: summary.totalRequests,
           },
           {
-            label: "In attesa",
-            value: summary.inviati,
+            label: "Aperte",
+            value: summary.openRequests,
+          },
+          {
+            label: "Attesa artista",
+            value: summary.waitingArtist,
+          },
+          {
+            label: "Attesa cliente",
+            value: summary.waitingClient,
           },
           {
             label: "Confermate",
-            value: summary.confermati,
+            value: summary.confirmed,
           },
           {
             label: "Cancellate",
-            value: summary.cancellati,
+            value: summary.cancelled,
           },
         ]
       : [
           {
-            label: "In attesa di risposta",
-            value: summary.inviati,
+            label: "Tutte le richieste",
+            value: summary.totalRequests,
+          },
+          {
+            label: "Da confermare",
+            value: summary.waitingArtist,
+          },
+          {
+            label: "Attesa cliente",
+            value: summary.waitingClient,
           },
           {
             label: "Confermate",
-            value: summary.confermati,
+            value: summary.confirmed,
           },
           {
-            label: "Tutte le richieste",
-            value: summary.totalEvents,
+            label: "Cancellate",
+            value: summary.cancelled,
           },
         ];
 
